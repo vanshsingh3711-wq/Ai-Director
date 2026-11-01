@@ -46,7 +46,7 @@ export function VideoUploadModal({ isOpen, onClose, onSuccess }: VideoUploadModa
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
-  const [videoType, setVideoType] = useState<"talking_head" | "faceless_short">("talking_head");
+  const [videoType, setVideoType] = useState<"talking_head" | "faceless_short" | "tech_explainer">("talking_head");
   const [step, setStep] = useState<UploadStep>("idle");
   const [progress, setProgress] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);

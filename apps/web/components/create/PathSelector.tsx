@@ -1,11 +1,11 @@
 "use client";
 
 import React from "react";
-import { Sparkles, Upload, Zap, Globe, Check } from "lucide-react";
+import { Sparkles, Upload, Zap, Globe, Check, Smartphone } from "lucide-react";
 import { Card, Badge } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
-export type CreationPath = "faceless" | "upload" | "template" | "url";
+export type CreationPath = "faceless" | "upload" | "template" | "url" | "tech_explainer";
 
 export interface PathSelectorProps {
   selectedPath: CreationPath;
@@ -40,6 +40,18 @@ export function PathSelector({
       iconColor: "#a78bfa",
       glow: "violet",
       features: ["Auto Character & Voice", "Contextual B-Roll", "Timed Sound FX"],
+    },
+    {
+      id: "tech_explainer",
+      title: "Tech Explainer (3D & UI)",
+      badge: "Roboverse Style",
+      badgeVariant: "rendering",
+      description:
+        "Input a script or topic. AI Director generates voiceover with 3D mobile device mockups, isometric dev windows, and studio motion graphics in 9:16 vertical.",
+      icon: Smartphone,
+      iconColor: "#00e5ff",
+      glow: "cyan",
+      features: ["3D Device Mockup", "Isometric Dev Windows", "Studio Vignette Canvas"],
     },
     {
       id: "upload",

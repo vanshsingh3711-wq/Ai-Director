@@ -59,7 +59,7 @@ export function VideoDetailDrawer({
     "";
 
   const settings = parsedEditData?.settings || {};
-  const aspectRatio = settings?.aspect_ratio || (video.video_type === "faceless_short" ? "9:16" : "16:9");
+  const aspectRatio = settings?.aspect_ratio || ((video.video_type === "faceless_short" || video.video_type === "tech_explainer") ? "9:16" : "16:9");
   const videoStyle = settings?.video_style || "viral";
   const captionPreset = settings?.caption_preset || "tiktok_yellow";
 

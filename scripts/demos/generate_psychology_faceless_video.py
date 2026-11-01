@@ -30,7 +30,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Force temp directory to local disk to prevent /tmp partition overflow
-PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 os.environ["TMPDIR"] = os.path.join(PROJECT_ROOT, "media_temp", "tmp")
 os.environ["TEMP"] = os.environ["TMPDIR"]
 os.environ["TMP"] = os.environ["TMPDIR"]

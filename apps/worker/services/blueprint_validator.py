@@ -161,7 +161,19 @@ def validate_blueprint(
 
         # ── Validate trigger_id exists in timestamp_map ───────────────
         base_id = trigger_id.split("_cut")[0]
-        if trigger_id not in timestamp_map and base_id not in timestamp_map:
+        chunk = timestamp_map.get(trigger_id) or timestamp_map.get(base_id)
+        if not chunk:
+            # Check integer or leading-zero variants (e.g. ID_1 <-> ID_01, beat_1 <-> beat_01)
+            import re
+            m = re.match(r"(?i)(id|beat)[_-]?(\d+)", base_id)
+            if m:
+                pfx, num = m.group(1).lower(), int(m.group(2))
+                for cand in [f"{pfx}_{num}", f"{pfx}_{num:02d}", f"{pfx.upper()}_{num}", f"{pfx.upper()}_{num:02d}", str(num)]:
+                    if cand in timestamp_map:
+                        chunk = timestamp_map[cand]
+                        break
+
+        if not chunk:
             # sfx and transition can be synthetic timeline events
             if action in ("sfx", "transition"):
                 chunk_start = float(edit.get("start", 0.0))
@@ -175,8 +187,6 @@ def validate_blueprint(
                 ))
                 report.rejected_count += 1
                 continue
-        else:
-            chunk = timestamp_map.get(trigger_id) or timestamp_map.get(base_id, {})
 
         chunk_start = float(edit.get("start") if edit.get("start") is not None else chunk.get("start", 0.0))
         chunk_end = float(edit.get("end") if edit.get("end") is not None else chunk.get("end", 0.0))
@@ -371,6 +381,13 @@ def validate_blueprint(
                 "tactile_checklist_stamp": {"item1Text", "item2Text", "item3Text"},
                 # Universal Phase 8: Split Slider Comparison & Transformation Wipe
                 "split_slider_comparison": {"leftTitle", "leftMetric", "rightTitle", "rightMetric"},
+                # 9:16 & 16:9 Roboverse-Style Tech Explainer 3D & UI Pack
+                "device_mockup_phone": {"appTitle"},
+                "device-mockup-phone": {"appTitle"},
+                "isometric_card_deck": {"headline"},
+                "isometric-card-deck": {"headline"},
+                "orbital_agent_badge": {"coreTitle"},
+                "orbital-agent-badge": {"coreTitle"},
             }
 
             KEY_DEFAULTS = {
@@ -378,6 +395,9 @@ def validate_blueprint(
                 "afterLabel": "AFTER",
                 "delta": "",
                 "author": "",
+                "appTitle": "AI Assistant",
+                "headline": "System Architecture",
+                "coreTitle": "Autonomous Core",
                 "language": "python",
                 "url": "https://example.com",
                 "tabTitle": "Overview",
@@ -550,7 +570,10 @@ def validate_blueprint(
                     "newspaper_highlighter", "magnifying_glass_zoom",
                     "urgency_dial_gauge", "mind_map_node_web",
                     "timeline_roadmap", "hierarchy_pyramid",
-                    "tactile_checklist_stamp", "split_slider_comparison"
+                    "tactile_checklist_stamp", "split_slider_comparison",
+                    "device_mockup_phone", "device-mockup-phone",
+                    "isometric_card_deck", "isometric-card-deck",
+                    "orbital_agent_badge", "orbital-agent-badge"
                 }
                 if edit.get("motion_graphics_type") in UNSUITABLE_FOR_BEHIND:
                     norm_layer = "front"

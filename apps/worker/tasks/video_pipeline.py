@@ -146,24 +146,24 @@ def process_video_pipeline(self: Task, job_id: str) -> dict:
         # --- STEP 1: DOWNLOADING & STAGING ---
         with PipelineStep(1, 8, "DOWNLOADING & RAW MEDIA INGEST", f"Source: {job_source_url}"):
             set_job_status_downloading(job_uuid)
-            if job_video_type != VideoType.FACELESS_SHORT:
+            if job_video_type not in (VideoType.FACELESS_SHORT, VideoType.TECH_EXPLAINER):
                 stage_raw_video(job_source_url, raw_video_path, settings.TEMP_DIR)
             elif job_settings.get("audio_url"):
-                log_info("Faceless video with uploaded audio. Downloading audio...")
+                log_info("Faceless/Explainer video with uploaded audio. Downloading audio...")
                 stage_raw_video(job_settings["audio_url"], raw_video_path, settings.TEMP_DIR)
             else:
-                log_info("Faceless video detected. Skipping raw video download.")
+                log_info("Faceless/Explainer video detected. Skipping raw video download.")
 
         # --- STEP 2: TRANSCRIBING & AUDIO ANALYSIS ---
         with PipelineStep(2, 8, "AUDIO EXTRACTION & SPEECH-TO-TEXT", "faster-whisper (int8 CPU / speech gap segmentation)"):
             set_job_status_transcribing(job_uuid)
-            if job_video_type != VideoType.FACELESS_SHORT:
+            if job_video_type not in (VideoType.FACELESS_SHORT, VideoType.TECH_EXPLAINER):
                 extract_audio_track(raw_video_path, extracted_wav_path, sample_rate=16000, channels=1)
                 ffmpeg_bin = get_ffmpeg_binary_path()
                 total_duration = _probe_duration(ffmpeg_bin, raw_video_path)
             else:
                 if job_settings.get("audio_url"):
-                    log_info("Using uploaded audio for Faceless Video. Extracting and converting to WAV...")
+                    log_info("Using uploaded audio for Faceless/Explainer Video. Extracting and converting to WAV...")
                     extract_audio_track(raw_video_path, extracted_wav_path, sample_rate=16000, channels=1)
                     
                     ffmpeg_bin = get_ffmpeg_binary_path()
@@ -180,9 +180,9 @@ def process_video_pipeline(self: Task, job_id: str) -> dict:
                     # Overwrite the raw uploaded file with the generated video base
                     os.rename(temp_base_video, raw_video_path)
                 else:
-                    log_info("Generating TTS Audio for Faceless Video...")
+                    log_info("Generating TTS Audio for Faceless/Explainer Video...")
                     topic = job_settings.get("topic", job_title)
-                    script = job_settings.get("script", f"Here is a brand new faceless video about {topic}. We are currently generating this completely with AI. Stay tuned for the final result.")
+                    script = job_settings.get("script", f"Here is a brand new video about {topic}. We are currently generating this completely with AI. Stay tuned for the final result.")
                     
                     import asyncio
                     import edge_tts
@@ -205,12 +205,32 @@ def process_video_pipeline(self: Task, job_id: str) -> dict:
                     ffmpeg_bin = get_ffmpeg_binary_path()
                     total_duration = _probe_duration(ffmpeg_bin, extracted_wav_path)
                     
-                    log_info("Generating blank base video with TTS audio for compositor...")
-                    os.system(
-                        f'{ffmpeg_bin} -y -f lavfi -i color=c=black:s=1080x1920:d={total_duration} '
-                        f'-i "{extracted_wav_path}" '
-                        f'-c:v libx264 -preset ultrafast -c:a aac -shortest "{raw_video_path}"'
-                    )
+                    if job_video_type == VideoType.TECH_EXPLAINER:
+                        log_info("Generating 9:16 Studio Radial Vignette base video for Tech Explainer...")
+                        os.makedirs(settings.TEMP_DIR, exist_ok=True)
+                        studio_bg = os.path.join(settings.TEMP_DIR, "studio_vignette_9x16.png")
+                        if not os.path.exists(studio_bg):
+                            from PIL import Image
+                            import numpy as np
+                            y, x = np.ogrid[:1920, :1080]
+                            dist = np.sqrt((x - 540)**2 + (y - 960)**2)
+                            max_dist = np.sqrt(540**2 + 960**2)
+                            factor = np.clip(1.0 - (dist / (max_dist * 0.85)), 0.0, 1.0)
+                            base_c = np.array([2, 6, 11], dtype=float)
+                            center_c = np.array([15, 43, 56], dtype=float)
+                            arr = (base_c + factor[:, :, None] * (center_c - base_c)).astype(np.uint8)
+                            Image.fromarray(arr).save(studio_bg)
+                        os.system(
+                            f'{ffmpeg_bin} -y -loop 1 -i "{studio_bg}" -i "{extracted_wav_path}" '
+                            f'-c:v libx264 -preset ultrafast -tune stillimage -c:a aac -shortest "{raw_video_path}"'
+                        )
+                    else:
+                        log_info("Generating blank base video with TTS audio for compositor...")
+                        os.system(
+                            f'{ffmpeg_bin} -y -f lavfi -i color=c=black:s=1080x1920:d={total_duration} '
+                            f'-i "{extracted_wav_path}" '
+                            f'-c:v libx264 -preset ultrafast -c:a aac -shortest "{raw_video_path}"'
+                        )
 
             bracketed_transcript, timestamp_map = transcribe_and_compress(
                 audio_path=extracted_wav_path,
@@ -236,7 +256,7 @@ def process_video_pipeline(self: Task, job_id: str) -> dict:
             log_info(f"Unified Audio Regions preview: {unified_audio_regions[:5]}")
 
             from services.speech_pruner import generate_deterministic_silence_cuts, invert_cuts_to_kept_ranges
-            if job_video_type != VideoType.FACELESS_SHORT:
+            if job_video_type not in (VideoType.FACELESS_SHORT, VideoType.TECH_EXPLAINER):
                 deterministic_cuts = generate_deterministic_silence_cuts(
                     total_duration=total_duration,
                     speech_intervals=speech_intervals,
@@ -255,7 +275,7 @@ def process_video_pipeline(self: Task, job_id: str) -> dict:
 
         # --- STEP 3: VISUAL ANALYSIS ---
         with PipelineStep(3, 8, "VISUAL INTELLIGENCE LAYER", "Extracting scenes, subjects, and safe regions"):
-            if job_video_type != VideoType.FACELESS_SHORT:
+            if job_video_type not in (VideoType.FACELESS_SHORT, VideoType.TECH_EXPLAINER):
                 visual_timeline = analyze_visual_context(
                     video_path=raw_video_path,
                     video_id=job_id_str,
@@ -331,10 +351,22 @@ def process_video_pipeline(self: Task, job_id: str) -> dict:
                             "MAX_OVERLAYS_PER_MIN": 8,
                             "MIN_OVERLAY_DURATION": 2.0,
                             "MAX_OVERLAY_DURATION": 6.0,
-                            "is_faceless": (job_video_type == VideoType.FACELESS_SHORT)
+                            "is_faceless": (job_video_type == VideoType.FACELESS_SHORT),
+                            "is_tech_explainer": (job_video_type == VideoType.TECH_EXPLAINER),
                         }
                         updated_sheet, log_table = assign_visual_treatments(beat_sheet_dict, active_speech_dur, treatment_settings)
                         beat_sheet_dict = updated_sheet
+                        
+                        # For Tech Explainers, ensure 100% continuous visual chaining (zero dead air)
+                        if job_video_type == VideoType.TECH_EXPLAINER and beat_sheet_dict.get("beats"):
+                            b_list = beat_sheet_dict["beats"]
+                            b_list[0]["start"] = 0.0
+                            for i in range(len(b_list) - 1):
+                                gap_mid = round((b_list[i]["end"] + b_list[i+1]["start"]) / 2.0, 2)
+                                b_list[i]["end"] = gap_mid
+                                b_list[i+1]["start"] = gap_mid
+                            b_list[-1]["end"] = total_duration
+                            beat_sheet_dict["is_tech_explainer"] = True
                         
                         log_info(f"Generated {len(beat_sheet_dict.get('beats', []))} beats on active speech ({active_speech_dur:.1f}s) with treatments assigned.")
                 except Exception as e:
@@ -355,12 +387,181 @@ def process_video_pipeline(self: Task, job_id: str) -> dict:
             is_faceless_job = (job_video_type == VideoType.FACELESS_SHORT or "faceless" in str(job_video_type).lower())
             directing_mode = job_settings.get("directing_mode", "auto")
             use_chunked_directing = (
-                directing_mode == "chunked" or
-                (directing_mode == "auto" and (total_duration > 45.0 or is_faceless_job))
+                job_video_type != VideoType.TECH_EXPLAINER and (
+                    directing_mode == "chunked" or
+                    (directing_mode == "auto" and (total_duration > 45.0 or is_faceless_job))
+                )
             )
             log_info(f"AI Directing Models -> Story & Motion Graphics: {mg_model} | B-Roll & Visuals: {broll_model} | Faceless: {is_faceless_job} | Mode: {'chunked' if use_chunked_directing else 'legacy'}")
 
-            if use_chunked_directing:
+            if job_video_type == VideoType.TECH_EXPLAINER:
+                log_info("⚡ Tech Explainer Directing: Generating script-tailored motion graphics plan...")
+                mg_plan = generate_motion_graphics_plan(unified_json_str, mg_model, style_pref)
+                
+                # Tech Explainer Guarantee: 100% continuous coverage, zero dead air gaps, and rich visual diversity
+                from services.ai_director import EditDecision
+                
+                # Index LLM edits by beat id
+                llm_edits_by_id = {}
+                for e in mg_plan.edits:
+                    if getattr(e, "action", "") == "motion_graphics":
+                        llm_edits_by_id[str(e.trigger_id)] = e
+
+                GENERIC_TEXT_TEMPLATES = {"hero_reveal", "quote_reveal", "kinetic_text", "stat_card_highlight", "card_minimal"}
+                
+                final_mg_edits = []
+                used_templates = set()
+                
+                for b in beat_sheet_dict.get("beats", []):
+                    b_tid = f"beat_{b['id']}"
+                    sugg = b.get("suggested_template") or "orbital_agent_badge"
+                    
+                    chosen_template = sugg
+                    chosen_targets = None
+                    chosen_reason = f"Continuous Tech Explainer coverage for {b_tid}"
+                    
+                    llm_edit = llm_edits_by_id.get(b_tid)
+                    if llm_edit and getattr(llm_edit, "motion_graphics_type", None):
+                        mg_type = llm_edit.motion_graphics_type
+                        # Only keep LLM template if it is rich and not a generic text card and not a duplicate
+                        if mg_type not in GENERIC_TEXT_TEMPLATES and mg_type not in used_templates:
+                            chosen_template = mg_type
+                            chosen_targets = llm_edit.motion_graphics_targets
+                            chosen_reason = getattr(llm_edit, "reason", chosen_reason)
+                    
+                    # If no valid targets from LLM or template was overridden, populate rich production targets
+                    if not chosen_targets or chosen_template == sugg:
+                        chosen_template = sugg
+                        if sugg == "orbital_agent_badge":
+                            chosen_targets = {
+                                "coreTitle": "AUTONOMOUS AI",
+                                "coreSubtitle": "Reasoning Nucleus",
+                                "statusBadge": "ACTIVE // 100% COHERENCE",
+                                "agent1": "Planner",
+                                "agent2": "Executor",
+                                "agent3": "Validator",
+                                "agent4": "Sentinel",
+                                "accentColor": "#00E5FF",
+                            }
+                        elif sugg == "device_mockup_phone":
+                            chosen_targets = {
+                                "appTitle": "Mission Control",
+                                "botName": "Mobile Assistant",
+                                "avatarText": "MA",
+                                "accentColor": "#00BFA5",
+                                "messages": [
+                                    {"sender": "user", "text": "Trigger mission: deploy agent swarm", "badge": "SENT", "badgeColor": "#00BFA5"},
+                                    {"sender": "bot", "text": "Mission accepted. Orchestrator spinning up containers.", "badge": "ACK", "badgeColor": "#00BFA5"},
+                                ],
+                            }
+                        elif sugg == "isometric_card_deck":
+                            chosen_targets = {
+                                "headline": "ORCHESTRATOR CLUSTER",
+                                "subheadline": "Isolated Docker Sandboxes",
+                                "accentColor": "#00E5FF",
+                                "cards": [
+                                    {"title": "agent-worker-01", "badge": "RUNNING", "badgeColor": "#10B981", "type": "docker"},
+                                    {"title": "eval-sandbox", "badge": "ISOLATED", "badgeColor": "#00E5FF", "type": "terminal"},
+                                    {"title": "sentinel-daemon", "badge": "MONITORING", "badgeColor": "#8B5CF6", "type": "analytics"},
+                                ],
+                            }
+                        elif sugg == "exploded_layer_stack":
+                            chosen_targets = {
+                                "title": "THE REASONING NUCLEUS",
+                                "subtitle": "4-TIER COGNITIVE ARCHITECTURE & DETERMINISTIC EXECUTION",
+                                "badge": "SYSTEM ARCHITECTURE",
+                                "synthesis": "Upper tiers inherit latency constraints and epistemic coherence directly from the foundational substrate below.",
+                                "layer1Title": "Foundational Neural Weights",
+                                "layer1Desc": "Quantized FP8 parameter clusters bound to ultra-dense HBM memory bandwidth.",
+                                "layer1Badge": "HARDWARE SUBSTRATE",
+                                "layer1Metric": "4.8 TB/S BANDWIDTH",
+                                "layer2Title": "Context Window Orchestration",
+                                "layer2Desc": "Attention routing, KV-cache compression, and speculative token draft verification.",
+                                "layer2Badge": "NEURAL LATENT CORE",
+                                "layer2Metric": "128K TOKENS / SEC",
+                                "layer3Title": "Deterministic Sandbox & Memory",
+                                "layer3Desc": "Hierarchical vector indexing and real-time knowledge graph traversal.",
+                                "layer3Badge": "EPISTEMIC STATE",
+                                "layer3Metric": "1.2M EMBEDDINGS",
+                                "layer4Title": "Autonomous Tool Execution",
+                                "layer4Desc": "Sandboxed agent synthesis, deterministic code interpreter, and external API invocation.",
+                                "layer4Badge": "COGNITIVE RUNTIME",
+                                "layer4Metric": "< 150ms LATENCY",
+                                "personality": "technical",
+                            }
+                        elif sugg == "tactile_checklist_stamp":
+                            chosen_targets = {
+                                "title": "DETERMINISTIC TEST SUITE",
+                                "badge": "AUTOMATED RECURSIVE CHECK",
+                                "item1Text": "Static AST Syntax Check",
+                                "item1Detail": "Verified against Python 3.12 grammar",
+                                "item1Status": "pass",
+                                "item2Text": "Deterministic Unit Tests",
+                                "item2Detail": "41/41 test assertions passed in sandbox",
+                                "item2Status": "pass",
+                                "item3Text": "Zero Hallucination Guard",
+                                "item3Detail": "Strict grounding check against schema",
+                                "item3Status": "pass",
+                                "verdictText": "ALL CHECKS PASSED: SAFE TO EXECUTE",
+                                "verdictStatus": "APPROVED",
+                                "synthesis": "Recursive reasoning validates every command before terminal execution.",
+                            }
+                        elif sugg == "mind_map_node_web":
+                            chosen_targets = {
+                                "title": "AUTONOMOUS DEVELOPER SWARMS",
+                                "badge": "MULTI-AGENT MESH",
+                                "centerTitle": "SWARM CLUSTER",
+                                "centerIcon": "AI",
+                                "node1Title": "Code Synthesis Agent",
+                                "node1Desc": "Generates self-healing PRs",
+                                "node1Icon": "code",
+                                "node2Title": "Test Oracle Agent",
+                                "node2Desc": "Verifies deterministic runtime",
+                                "node2Icon": "shield",
+                                "node3Title": "Cluster Self-Healer",
+                                "node3Desc": "Automatic node recovery",
+                                "node3Icon": "zap",
+                                "synthesis": "Modern software architectures build autonomous, self-healing developer swarms.",
+                            }
+                        elif sugg == "urgency_dial_gauge":
+                            chosen_targets = {
+                                "title": "SECURITY SENTINEL HUD",
+                                "badge": "ANOMALY ISOLATION",
+                                "value": "98",
+                                "unit": "%",
+                                "zoneLabel": "CONTAINER ISOLATED",
+                                "subtext": "Anomaly intercepted: 42ms isolation triggered.",
+                            }
+                        elif sugg == "metric_reveal":
+                            chosen_targets = {
+                                "label": "ISOLATION SPEED",
+                                "metric": "42 ms",
+                                "delta": "CONTAINER QUARANTINED",
+                            }
+                        else:
+                            chosen_targets = {
+                                "headline": b.get("focus_phrase") or b.get("text", "")[:40],
+                                "subheadline": b.get("text", "")[:60],
+                            }
+                    
+                    used_templates.add(chosen_template)
+                    
+                    final_mg_edits.append(EditDecision(
+                        action="motion_graphics",
+                        trigger_id=b_tid,
+                        start=b["start"],
+                        end=b["end"],
+                        motion_graphics_type=chosen_template,
+                        motion_graphics_targets=chosen_targets,
+                        reason=chosen_reason
+                    ))
+                
+                final_mg_edits.sort(key=lambda e: e.start)
+                mg_plan = EditList(edits=final_mg_edits)
+                broll_plan = EditList(edits=[])
+                char_plan = EditList(edits=[])
+                log_info(f"Tech Explainer: Enforced {len(mg_plan.edits)} continuous studio motion graphic scenes covering 100% of duration.")
+            elif use_chunked_directing:
                 log_info(f"⚡ Activating Chunked Micro-Scene Directing Architecture (duration: {total_duration:.1f}s)...")
                 script_chunks = chunk_transcript(timestamp_map, total_duration)
 
@@ -442,6 +643,7 @@ def process_video_pipeline(self: Task, job_id: str) -> dict:
                     ai_model_pref=ai_model_pref,
                     deterministic_cuts=deterministic_cuts,
                     is_faceless=is_faceless_job,
+                    is_tech_explainer=(job_video_type == VideoType.TECH_EXPLAINER),
                 )
                 edit_decision_list = generate_sfx_plan(
                     unified_analysis_json=unified_json_str,
@@ -453,14 +655,30 @@ def process_video_pipeline(self: Task, job_id: str) -> dict:
         # --- STEP 6: BLUEPRINT VALIDATION ---
         with PipelineStep(6, 8, "BLUEPRINT VALIDATION", "Enforcing B-roll budgets, timestamp validity, and safety guardrails"):
             
-            # --- FIX: Inject beat_sheet into timestamp_map so the validator doesn't reject beat triggers ---
+            # --- FIX: Inject beat_sheet into timestamp_map with sliced words so subtitle generator has active-word karaoke ---
             if beat_sheet_dict and "beats" in beat_sheet_dict:
+                extracted_words = []
+                for k, v in timestamp_map.items():
+                    if isinstance(v, dict) and "words" in v:
+                        extracted_words.extend(v["words"])
+                extracted_words = sorted(
+                    {(w.get("word", ""), w.get("start", 0)): w for w in extracted_words}.values(),
+                    key=lambda w: w.get("start", 0)
+                )
+
                 for b in beat_sheet_dict["beats"]:
                     b_id = f"beat_{b['id']}"
+                    b_start = b["start"]
+                    b_end = b["end"]
+                    matched_words = [
+                        w for w in extracted_words
+                        if w.get("start", 0) >= b_start - 0.25 and w.get("end", 0) <= b_end + 0.25
+                    ]
                     timestamp_map[b_id] = {
-                        "start": b["start"],
-                        "end": b["end"],
-                        "text": b["text"]
+                        "start": b_start,
+                        "end": b_end,
+                        "text": b.get("text", ""),
+                        "words": matched_words,
                     }
                     
             is_faceless = (job_video_type == VideoType.FACELESS_SHORT or "faceless" in str(job_video_type).lower())
@@ -488,7 +706,7 @@ def process_video_pipeline(self: Task, job_id: str) -> dict:
         # --- STEP 7: ASSET SOURCING & SUBTITLES ---
         with PipelineStep(7, 8, "ASSET SOURCING & DYNAMIC SUBTITLES", "Pexels Video API & ASS Karaoke formatting"):
             edits_for_broll = list(validated_edits)
-            if is_faceless:
+            if is_faceless and job_video_type != VideoType.TECH_EXPLAINER:
                 # In faceless mode, guarantee at least 10-14 unique stock footage clips for rich background rotation
                 seen_triggers = {e.get("trigger_id") for e in edits_for_broll if e.get("action") == "b_roll"}
                 if broll_plan and getattr(broll_plan, "edits", None):
@@ -523,7 +741,7 @@ def process_video_pipeline(self: Task, job_id: str) -> dict:
             )
 
             # Continuous stock footage background for faceless videos (eliminates black screens completely)
-            if is_faceless and broll_map:
+            if is_faceless and job_video_type != VideoType.TECH_EXPLAINER and broll_map:
                 valid_broll_clips = [
                     p for p in broll_map.values()
                     if os.path.exists(p) and os.path.getsize(p) > 1024
@@ -562,6 +780,7 @@ def process_video_pipeline(self: Task, job_id: str) -> dict:
                 caption_preset=caption_preset,
                 aspect_ratio=aspect_ratio,
                 is_faceless=is_faceless,
+                alignment=2 if job_video_type == VideoType.TECH_EXPLAINER else None,
             )
 
         # --- STEP 7.5: 3D AVATAR RENDERING ---
@@ -585,6 +804,12 @@ def process_video_pipeline(self: Task, job_id: str) -> dict:
         # --- STEP 8: FFMPEG COMPOSITOR & PUBLISHING ---
         with PipelineStep(8, 8, "FFMPEG RENDERING & PUBLISHING", "Assembly of final MP4 and social export"):
             set_job_status_rendering(job_uuid)
+            effective_settings = dict(job_settings)
+            if job_video_type == VideoType.TECH_EXPLAINER:
+                effective_settings["continuous_composition"] = True
+                effective_settings["SINGLE_PASS_COMPOSITION"] = True
+                effective_settings["is_tech_explainer"] = True
+
             render_video_pipeline(
                 raw_video_path=raw_video_path,
                 output_mp4_path=rendered_mp4_path,
@@ -592,7 +817,7 @@ def process_video_pipeline(self: Task, job_id: str) -> dict:
                 broll_map=broll_map,
                 edits=validated_edits,
                 timestamp_map=timestamp_map,
-                settings=job_settings,
+                settings=effective_settings,
                 character_video_path=character_webm_path,
             )
             

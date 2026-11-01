@@ -60,6 +60,10 @@ ALLOWED_TEMPLATES = {
     "tactile_checklist_stamp",
     # Universal Phase 8: Split Slider Comparison & Transformation Wipe
     "split_slider_comparison",
+    # 9:16 & 16:9 Roboverse-Style Tech Explainer 3D & UI Pack
+    "device_mockup_phone",
+    "isometric_card_deck",
+    "orbital_agent_badge",
     # Deep Visual Rhetoric Explainer Pack
     "architecture_pipeline",
     "todo_list",
@@ -104,6 +108,13 @@ REMOTION_ONLY_TEMPLATES = {
     "hierarchy_pyramid",
     "tactile_checklist_stamp",
     "split_slider_comparison",
+    # 9:16 & 16:9 Roboverse-Style Tech Explainer 3D & UI Pack
+    "device_mockup_phone",
+    "device-mockup-phone",
+    "isometric_card_deck",
+    "isometric-card-deck",
+    "orbital_agent_badge",
+    "orbital-agent-badge",
     # 10 Finance Motion Graphics Pack
     "candlestick_hud",
     "candlestick-hud",
@@ -188,6 +199,13 @@ RULES:
    - "hierarchy_pyramid"    (targets: 'title', 'badge', 'tier1Title', 'tier1Subtitle', 'tier1Pct', 'tier1Icon', 'tier2Title', 'tier2Subtitle', 'tier2Pct', 'tier2Icon', 'tier3Title', 'tier3Subtitle', 'tier3Pct', 'tier3Icon', 'synthesis')
    - "tactile_checklist_stamp" (targets: 'title', 'badge', 'item1Text', 'item1Detail', 'item1Status', 'item2Text', 'item2Detail', 'item2Status', 'item3Text', 'item3Detail', 'item3Status', 'verdictText', 'verdictStatus', 'synthesis')
    - "split_slider_comparison" (targets: 'title', 'badge', 'leftTag', 'leftTitle', 'leftMetric', 'leftDetail', 'leftIcon', 'rightTag', 'rightTitle', 'rightMetric', 'rightDetail', 'rightIcon', 'sliderStart', 'sliderEnd', 'synthesis')
+   - "device_mockup_phone"  (targets: 'appTitle', 'botName', 'avatarText', 'accentColor', 'messages' list of dicts with 'sender', 'text', 'badge', 'badgeColor')
+   - "isometric_card_deck"  (targets: 'headline', 'subheadline', 'accentColor', 'cards' list of dicts with 'title', 'badge', 'badgeColor', 'type': 'docker'/'terminal'/'analytics')
+   - "orbital_agent_badge"  (targets: 'coreTitle', 'coreSubtitle', 'statusBadge', 'agent1', 'agent2', 'agent3', 'agent4', 'accentColor')
+     * SCRIPT-AWARE SELECTION (Option C vs Option B):
+       - Use "device_mockup_phone" (Option C: 3D Handheld Device) when the script discusses mobile apps, consumer phone interactions, smartphone notifications, mobile AI assistants, messaging/chat bots, or handheld briefings (e.g. 'Claude sends you a morning briefing on your phone', 'open the app and ask the assistant to schedule it').
+       - Use "isometric_card_deck" (Option B: Modern Software Window) when the script discusses backend infrastructure, server clusters, Docker/Kubernetes nodes, autonomous agent swarms, terminal trace executions, test suites, or system telemetry (e.g. 'the orchestrator spun up 8 Docker containers', 'the reasoning engine refactored database indices with zero deadlocks').
+       - Use "orbital_agent_badge" when introducing the foundational AI agent nucleus, multi-agent coordination, or core recursive reasoning loops.
      * Use "newspaper_highlighter" for leaked documents, official reports, study citations, breaking investigations, or highlighting critical evidence in a text clipping.
      * Use "magnifying_glass_zoom" for inspecting fine-print contract clauses, auditing financial terms, examining fine details, or uncovering hidden rules.
      * Use "urgency_dial_gauge" for extreme urgency, risk meters, stress overload, volatile spikes, inflation rates, or danger thresholds.
@@ -287,7 +305,15 @@ You have been provided with a pre-computed Beat Sheet in the Context. This is yo
         "tier1Title", "tier2Title", "tier3Title", "step1Title", "step2Title", "step3Title", "step1Badge", "step2Badge", "step3Badge",
         "step1Icon", "step2Icon", "step3Icon", "leftTag", "rightTag", "leftTitle", "rightTitle", "leftDetail", "rightDetail",
         "leftIcon", "rightIcon", "tagline", "verdictBadge", "author", "synthesis", "calloutTitle", "calloutDetail",
-        "cortexTitle", "amygdalaTitle", "sliderStart", "sliderEnd", "sp500Return", "hedgeReturn", "failureRate"
+        "cortexTitle", "amygdalaTitle", "sliderStart", "sliderEnd", "sp500Return", "hedgeReturn", "failureRate",
+        "appTitle", "botName", "avatarText", "accentColor", "messages", "headline", "subheadline", "cards",
+        "coreTitle", "coreSubtitle", "statusBadge", "agent1", "agent2", "agent3", "agent4",
+        "tiltAngleX", "tiltAngleY", "rotationX", "rotationY",
+        "node1Icon", "node2Icon", "node3Icon", "centerIcon", "node1Title", "node2Title", "node3Title", "node1Desc", "node2Desc", "node3Desc", "centerTitle",
+        "verdictText", "verdictStatus", "item1Status", "item2Status", "item3Status", "item1Detail", "item2Detail", "item3Detail", "item1Text", "item2Text", "item3Text",
+        "layer1Title", "layer2Title", "layer3Title", "layer4Title", "layer1Desc", "layer2Desc", "layer3Desc", "layer4Desc", "layer1Badge", "layer2Badge", "layer3Badge", "layer4Badge", "layer1Metric", "layer2Metric", "layer3Metric", "layer4Metric",
+        "stage1Title", "stage2Title", "stage3Title", "stage4Title", "stage1Desc", "stage2Desc", "stage3Desc", "stage4Desc", "stage1Badge", "stage2Badge", "stage3Badge", "stage4Badge", "stage1Metric", "stage2Metric", "stage3Metric", "stage4Metric",
+        "value", "subtext"
     }
 
     max_retries = 3

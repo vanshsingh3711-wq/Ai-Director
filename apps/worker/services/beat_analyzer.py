@@ -402,8 +402,9 @@ def enforce_beat_sheet_constraints(result_edits: list, beat_sheet_dict: dict, pl
             target_beat = min(beats, key=lambda b: abs(b["start"] - edit_start))
             
         action = getattr(edit, "action", "")
+        is_tech = beat_sheet_dict.get("is_tech_explainer", False)
         is_faceless = beat_sheet_dict.get("is_faceless", False) or target_beat.get("is_faceless", False) or (planner_name == "B-ROLL PLANNER")
-        if action != "b_roll" and not is_faceless and target_beat.get("importance", 5) <= 2:
+        if action != "b_roll" and not (is_faceless or is_tech) and target_beat.get("importance", 5) <= 2:
             dropped += 1
             continue
 
@@ -457,7 +458,104 @@ def enforce_beat_sheet_constraints(result_edits: list, beat_sheet_dict: dict, pl
         focus = chosen.get("focus_phrase") or chosen["text"]
         suggested = chosen.get("suggested_template")
 
-        if suggested == "compound_formula":
+        if suggested == "orbital_agent_badge":
+            mg_type = "orbital_agent_badge"
+            mg_targets = {
+                "coreTitle": "REASONING NUCLEUS",
+                "coreSubtitle": "Autonomous Agent Core",
+                "statusBadge": "ONLINE // 100% COHERENCE",
+                "agent1": "Perception Engine",
+                "agent2": "Tree-of-Thought",
+                "agent3": "Deterministic Sandbox",
+                "agent4": "Self-Healing Sentinel",
+                "accentColor": "#00E5FF",
+            }
+        elif suggested == "device_mockup_phone":
+            mg_type = "device_mockup_phone"
+            mg_targets = {
+                "appTitle": "Mobile Assistant",
+                "botName": "Claude Code",
+                "avatarText": "AI",
+                "accentColor": "#00E5FF",
+                "messages": [
+                    {"sender": "user", "text": "Execute autonomous architecture mission", "badge": "TRIGGERED", "badgeColor": "#3B82F6"},
+                    {"sender": "bot", "text": "Orchestrating containers & deterministic tests...", "badge": "ACTIVE", "badgeColor": "#10B981"}
+                ],
+            }
+        elif suggested == "isometric_card_deck":
+            mg_type = "isometric_card_deck"
+            mg_targets = {
+                "headline": "ORCHESTRATOR CLUSTER",
+                "subheadline": "Isolated Docker Sandboxes",
+                "accentColor": "#00E5FF",
+                "cards": [
+                    {"title": "agent-worker-01", "badge": "RUNNING", "badgeColor": "#10B981", "type": "docker"},
+                    {"title": "eval-sandbox", "badge": "ISOLATED", "badgeColor": "#00E5FF", "type": "terminal"},
+                    {"title": "sentinel-daemon", "badge": "MONITORING", "badgeColor": "#8B5CF6", "type": "analytics"}
+                ],
+            }
+        elif suggested == "exploded_layer_stack":
+            mg_type = "exploded_layer_stack"
+            mg_targets = {
+                "title": "THE REASONING NUCLEUS",
+                "subtitle": "4-TIER COGNITIVE ARCHITECTURE & DETERMINISTIC EXECUTION",
+                "badge": "SYSTEM ARCHITECTURE",
+                "synthesis": "Upper tiers inherit latency constraints and epistemic coherence directly from the foundational substrate below.",
+                "layer1Title": "Foundational Neural Weights",
+                "layer1Desc": "Quantized FP8 parameter clusters bound to ultra-dense HBM memory bandwidth.",
+                "layer1Badge": "HARDWARE SUBSTRATE",
+                "layer1Metric": "4.8 TB/S BANDWIDTH",
+                "layer2Title": "Context Window Orchestration",
+                "layer2Desc": "Attention routing, KV-cache compression, and speculative token draft verification.",
+                "layer2Badge": "NEURAL LATENT CORE",
+                "layer2Metric": "128K TOKENS / SEC",
+                "layer3Title": "Deterministic Sandbox & Memory",
+                "layer3Desc": "Hierarchical vector indexing and real-time knowledge graph traversal.",
+                "layer3Badge": "EPISTEMIC STATE",
+                "layer3Metric": "1.2M EMBEDDINGS",
+                "layer4Title": "Autonomous Tool Execution",
+                "layer4Desc": "Sandboxed agent synthesis, deterministic code interpreter, and external API invocation.",
+                "layer4Badge": "COGNITIVE RUNTIME",
+                "layer4Metric": "< 150ms LATENCY",
+                "personality": "technical",
+            }
+        elif suggested == "tactile_checklist_stamp":
+            mg_type = "tactile_checklist_stamp"
+            mg_targets = {
+                "title": "DETERMINISTIC TEST SUITE",
+                "badge": "AUTOMATED RECURSIVE CHECK",
+                "item1Text": "Static AST Syntax Check",
+                "item1Detail": "Verified against Python 3.12 grammar",
+                "item1Status": "pass",
+                "item2Text": "Deterministic Unit Tests",
+                "item2Detail": "41/41 test assertions passed in sandbox",
+                "item2Status": "pass",
+                "item3Text": "Zero Hallucination Guard",
+                "item3Detail": "Strict grounding check against schema",
+                "item3Status": "pass",
+                "verdictText": "ALL CHECKS PASSED: SAFE TO EXECUTE",
+                "verdictStatus": "APPROVED",
+                "synthesis": "Recursive reasoning validates every command before terminal execution.",
+            }
+        elif suggested == "mind_map_node_web":
+            mg_type = "mind_map_node_web"
+            mg_targets = {
+                "title": "AUTONOMOUS DEVELOPER SWARMS",
+                "badge": "MULTI-AGENT MESH",
+                "centerTitle": "SWARM CLUSTER",
+                "centerIcon": "AI",
+                "node1Title": "Code Synthesis Agent",
+                "node1Desc": "Generates self-healing PRs",
+                "node1Icon": "code",
+                "node2Title": "Test Oracle Agent",
+                "node2Desc": "Verifies deterministic runtime",
+                "node2Icon": "shield",
+                "node3Title": "Cluster Self-Healer",
+                "node3Desc": "Automatic node recovery",
+                "node3Icon": "zap",
+                "synthesis": "Modern software architectures build autonomous, self-healing developer swarms.",
+            }
+        elif suggested == "compound_formula":
             mg_type = "compound_formula"
             mg_targets = {
                 "title": "RULE OF 72 FORMULA",
@@ -478,12 +576,19 @@ def enforce_beat_sheet_constraints(result_edits: list, beat_sheet_dict: dict, pl
         elif suggested == "urgency_dial_gauge":
             mg_type = "urgency_dial_gauge"
             mg_targets = {
-                "title": "CAPITAL DRAIN",
-                "badge": "RISK ALERT",
-                "value": "85",
+                "title": "SECURITY SENTINEL HUD",
+                "badge": "ANOMALY ISOLATION",
+                "value": "98",
                 "unit": "%",
-                "zoneLabel": "DANGER ZONE",
-                "subtext": focus[:45],
+                "zoneLabel": "CONTAINER ISOLATED",
+                "subtext": "Anomaly intercepted: 42ms isolation triggered.",
+            }
+        elif suggested == "metric_reveal" or role in ("statistic", "data", "metric", "kpi"):
+            mg_type = "metric_reveal"
+            mg_targets = {
+                "label": "ISOLATION SPEED",
+                "metric": "42 ms",
+                "delta": "CONTAINER QUARANTINED",
             }
         elif suggested == "stat_card_highlight":
             mg_type = "stat_card_highlight"
@@ -550,30 +655,32 @@ def enforce_beat_sheet_constraints(result_edits: list, beat_sheet_dict: dict, pl
         valid_edits.append(new_edit)
         return True
 
+    effective_max_gap = 0.5 if is_tech else MAX_UNTREATED_GAP_SEC
     while True:
         current_gaps = get_gaps()
         promoted_any = False
         for gs, ge in current_gaps:
-            if ge - gs > MAX_UNTREATED_GAP_SEC:
+            if ge - gs > effective_max_gap:
                 if promote_beat_in_gap(gs, ge):
                     promoted_any = True
                     break # Recompute gaps
         if not promoted_any:
             break
 
-    # MAX CONSECUTIVE RULE
-    # Find consecutive treated beats
-    sorted_beats = sorted(beats, key=lambda b: b["start"])
-    consecutive = 0
-    conflict_reported = False
-    for b in sorted_beats:
-        if b["id"] in treated_beat_ids:
-            consecutive += 1
-            if consecutive > 2:
-                print(f"[{planner_name}] CONFLICT: gap rule and max-2-consecutive rule conflict at beat {b['id']}")
-                conflict_reported = True
-        else:
-            consecutive = 0
+    # MAX CONSECUTIVE RULE (Only applies to talking-head videos with on-camera speaker)
+    if not (is_faceless or is_tech):
+        # Find consecutive treated beats
+        sorted_beats = sorted(beats, key=lambda b: b["start"])
+        consecutive = 0
+        conflict_reported = False
+        for b in sorted_beats:
+            if b["id"] in treated_beat_ids:
+                consecutive += 1
+                if consecutive > 2:
+                    print(f"[{planner_name}] CONFLICT: gap rule and max-2-consecutive rule conflict at beat {b['id']}")
+                    conflict_reported = True
+            else:
+                consecutive = 0
 
     # Print Table
     print(f"\n[{planner_name}] FINAL TABLE:")

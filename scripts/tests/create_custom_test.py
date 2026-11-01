@@ -7,8 +7,9 @@ import json
 from dotenv import load_dotenv
 
 load_dotenv()
-sys.path.append(os.getcwd() + "/apps/worker")
-os.chdir("apps/worker")
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+sys.path.append(os.path.join(ROOT_DIR, "apps/worker"))
+os.chdir(os.path.join(ROOT_DIR, "apps/worker"))
 
 from services.compositor import render_video_pipeline
 from services.transcriber import transcribe_and_compress

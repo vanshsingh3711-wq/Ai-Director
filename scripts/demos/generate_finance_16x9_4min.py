@@ -8,7 +8,7 @@ import subprocess
 import shutil
 from typing import List, Dict, Any
 
-ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 
 # Ensure disk space / temp directory configuration
 os.environ["TMPDIR"] = os.path.join(ROOT_DIR, "media_temp/tmp")

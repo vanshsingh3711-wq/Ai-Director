@@ -14,7 +14,7 @@ export interface VideoJob {
   title: string;
   source_url: string;
   rendered_url?: string | null;
-  video_type: "talking_head" | "faceless_short";
+  video_type: "talking_head" | "faceless_short" | "tech_explainer";
   status: VideoStatus;
   edit_decision_list?: string | null;
   error_log?: string | null;
@@ -23,5 +23,5 @@ export interface VideoJob {
 }
 
 export type StatusFilter = "ALL" | "COMPLETED" | "PROCESSING" | "FAILED";
-export type VideoTypeFilter = "ALL" | "faceless_short" | "talking_head";
+export type VideoTypeFilter = "ALL" | "faceless_short" | "talking_head" | "tech_explainer";
 export type ViewMode = "grid" | "list";

@@ -29,7 +29,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 
 # Prevent /tmp partition overflow by directing all temp files to project disk
 os.environ["TMPDIR"] = os.path.join(ROOT_DIR, "media_temp", "tmp")

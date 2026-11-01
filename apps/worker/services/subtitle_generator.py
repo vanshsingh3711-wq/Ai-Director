@@ -250,14 +250,14 @@ PRESET_CONFIGS = {
     },
     "modern_clean": {
         "fontname": "DejaVu Sans",
-        "primary": "&H00CCCCCC",
-        "active": "&H00FFFFFF",
+        "primary": "&H00FFFFFF",
+        "active": "&H00FFE500",  # Vibrant Electric Cyan in ASS BGR (&H00BBGGRR)
         "outline": "&H00000000",
         "back": "&H80000000",
-        "outline_w": 4,
+        "outline_w": 3,
         "shadow_w": 2,
         "bold": -1,
-        "pop_scale": 115,
+        "pop_scale": 125,
         "border_style": 1,
     },
     "minimal_boxed": {
@@ -372,7 +372,8 @@ def generate_ass_subtitles(
     outline_w = cfg["outline_w"]
     shadow_w = cfg["shadow_w"]
     bold = cfg["bold"]
-    pop_scale = cfg["pop_scale"]
+    enable_bounce = kwargs.get("enable_bounce", False)
+    pop_scale = kwargs.get("pop_scale", cfg["pop_scale"] if enable_bounce else 100)
     border_style = cfg["border_style"]
     fontname = cfg["fontname"]
 
@@ -390,7 +391,7 @@ def generate_ass_subtitles(
             elif e.get("trigger_id") and e.get("trigger_id") in timestamp_map:
                 chunk = timestamp_map[e["trigger_id"]]
                 cut_intervals.append((float(chunk.get("start", 0.0)), float(chunk.get("end", 0.0))))
-        elif act in ("motion_graphics", "motion_graphic"):
+        elif act in ("motion_graphics", "motion_graphic", "graphic", "overlay", "text_card") or bool(e.get("motion_graphics_type")) or bool(e.get("template_id")):
             if start is not None and end is not None and float(end) > float(start):
                 mg_intervals.append((float(start), float(end)))
             elif e.get("trigger_id") and e.get("trigger_id") in timestamp_map:
@@ -451,16 +452,35 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     raw_events: List[Dict[str, Any]] = []
 
     # 6. Filter canonical transcript chunks
-    has_transcript_chunks = any(not str(k).startswith("beat_") for k in timestamp_map.keys())
-    candidate_items = [
-        (cid, cdata) for cid, cdata in timestamp_map.items()
-        if not (has_transcript_chunks and str(cid).startswith("beat_"))
-    ]
-    if not candidate_items:
-        candidate_items = list(timestamp_map.items())
+    # We must only take canonical non-overlapping chunks to avoid duplicate overlapping subtitles.
+    import re
+    num_chunks = [(cid, cdata) for cid, cdata in timestamp_map.items() if str(cid).isdigit()]
+    if num_chunks:
+        candidate_items = sorted(num_chunks, key=lambda x: int(x[0]))
+    else:
+        primary_chunks = [
+            (cid, cdata) for cid, cdata in timestamp_map.items()
+            if re.match(r"^chunk_\d+$", str(cid))
+        ]
+        if primary_chunks:
+            candidate_items = sorted(primary_chunks, key=lambda x: x[1].get("start", 0))
+        else:
+            beat_chunks = [
+                (cid, cdata) for cid, cdata in timestamp_map.items()
+                if re.match(r"^beat_\d+$", str(cid)) and cdata.get("words")
+            ]
+            if beat_chunks:
+                candidate_items = sorted(beat_chunks, key=lambda x: x[1].get("start", 0))
+            else:
+                candidate_items = [
+                    (cid, cdata) for cid, cdata in timestamp_map.items()
+                    if "_cut" not in str(cid) and not str(cid).startswith("beat_")
+                ]
+                if not candidate_items:
+                    candidate_items = list(timestamp_map.items())
 
-    # For centered faceless captions, 3 words per window gives maximum punch and zero clutter
-    words_per_window = 3 if eff_alignment == 5 else 4
+    # For centered faceless captions and tech explainers, 3 words per window gives maximum punch and zero clutter
+    words_per_window = 3 if (eff_alignment in (2, 5) or caption_preset == "modern_clean") else 4
 
     # Calculate coordinate positions
     center_x = play_res_x // 2
@@ -610,20 +630,24 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                 if not clean_word:
                     continue
                 if actual_idx == active_idx:
-                    # High-impact kinetic spring bounce animation:
-                    # 1. Explosive scale-up to pop_scale (132%) with kinetic blur
-                    # 2. Springs smoothly into elevated active state (108%) with bold outline
-                    active_tag = (
-                        rf"{{\c{style_active}&\3c&H00000000&\bord{outline_w + 1}"
-                        rf"\t(0,{pop_in},\fscx{pop_scale}\fscy{pop_scale}\blur2)"
-                        rf"\t({pop_in},{pop_settle},\fscx108\fscy108\blur0)}}"
-                        f"{clean_word}"
-                        rf"{{\c{style_primary}&\fscx100\fscy100\bord{outline_w}\blur0}}"
-                    )
+                    if enable_bounce and pop_scale > 100:
+                        active_tag = (
+                            rf"{{\c{style_active}&\3c&H00000000&\bord{outline_w + 1}"
+                            rf"\t(0,{pop_in},\fscx{pop_scale}\fscy{pop_scale}\blur2)"
+                            rf"\t({pop_in},{pop_settle},\fscx108\fscy108\blur0)}}"
+                            f"{clean_word}"
+                            rf"{{\c{style_primary}&\fscx100\fscy100\bord{outline_w}\blur0}}"
+                        )
+                    else:
+                        active_tag = (
+                            rf"{{\c{style_active}&\3c&H00000000&\bord{outline_w + 1}}}"
+                            f"{clean_word}"
+                            rf"{{\c{style_primary}&\bord{outline_w}}}"
+                        )
                     formatted_words.append(active_tag)
                 else:
                     formatted_words.append(
-                        rf"{{\c{style_primary}&\fscx100\fscy100\bord{outline_w}}}{clean_word}"
+                        rf"{{\c{style_primary}&\bord{outline_w}}}{clean_word}"
                     )
 
             rendered_text = f"{pos_prefix}{' '.join(formatted_words)}"
@@ -636,9 +660,9 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     # Sort raw events chronologically
     raw_events.sort(key=lambda ev: ev["start"])
 
-    # Strict overlap elimination pass:
-    # Ensure event i finishes before event i+1 starts, leaving a crisp 20ms clearing buffer
-    # so the previous words disappear completely before the next caption begins.
+    # Seamless transition and overlap elimination pass:
+    # Consecutive words within dialogue connect contiguously (0ms gap) so that
+    # the subtitle text stays rock-solid on screen without disappearing for 1 frame (which causes blinking).
     for i in range(len(raw_events)):
         ev = raw_events[i]
         ev_start = ev["start"]
@@ -649,17 +673,23 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
         if i < len(raw_events) - 1:
             next_start = raw_events[i + 1]["start"]
-            if ev_end > next_start - 0.02:
-                if next_start - 0.02 >= ev_start + 0.05:
-                    ev_end = next_start - 0.02
-                else:
-                    ev_end = ev_start + 0.05
-                    raw_events[i + 1]["start"] = ev_end + 0.02
-                    if raw_events[i + 1]["end"] <= raw_events[i + 1]["start"]:
-                        raw_events[i + 1]["end"] = raw_events[i + 1]["start"] + 0.08
+            # If the next word follows immediately (or overlaps), bridge/clamp seamlessly to next_start.
+            # Bridges micro-gaps up to 120ms so consecutive words NEVER cause a 1-frame blank strobe.
+            if next_start > ev_start:
+                if ev_end >= next_start or (0.0 < next_start - ev_end <= 0.12):
+                    ev_end = next_start
+            else:
+                pass
+
+        if ev_end < ev_start + 0.05:
+            ev_end = ev_start + 0.05
 
         ev["start"] = ev_start
         ev["end"] = ev_end
+
+        # Skip degenerate zero-duration events
+        if ev_end <= ev_start:
+            continue
 
         start_str = format_ass_time(ev_start)
         end_str = format_ass_time(ev_end)

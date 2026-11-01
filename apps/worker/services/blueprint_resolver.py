@@ -57,6 +57,7 @@ def enforce_density_budgeting(
     min_sfx_spacing: float = 2.0,
     max_broll_ratio: float = 0.30,
     is_faceless: bool = False,
+    is_tech_explainer: bool = False,
 ) -> List[EditDecision]:
     """
     Applies density budget caps and narrative pacing constraints:
@@ -68,7 +69,13 @@ def enforce_density_budgeting(
     6. SFX density: Sounds spaced >= 2.0s apart.
     7. All timestamps bounded cleanly within [0.0, total_duration].
     """
-    if is_faceless:
+    if is_tech_explainer:
+        max_broll_ratio = 0.0
+        min_broll_spacing = 999.0
+        min_mg_spacing = 0.0
+        min_mg_gap = 0.0
+        min_visual_spacing = 0.0
+    elif is_faceless:
         max_broll_ratio = 1.0
         min_broll_spacing = 3.0
         min_mg_spacing = 3.5
@@ -133,8 +140,9 @@ def enforce_density_budgeting(
             result.append(edit)
 
         elif action == "motion_graphics":
-            # Cap Motion Graphic spacing >= 10.0s, ensure no overlap, and enforce >= 4.0s gap from last graphic
-            if (start - last_mg_start < min_mg_spacing) or (start < last_mg_end + min_mg_gap):
+            # For Tech Explainer, continuous back-to-back motion graphics are required (zero gaps).
+            # For talking-head videos, cap spacing >= 10.0s and enforce >= 4.0s gap from last graphic.
+            if not is_tech_explainer and ((start - last_mg_start < min_mg_spacing) or (start < last_mg_end + min_mg_gap)):
                 continue
 
             # Variety Enforcement: No consecutive duplicate compositions
@@ -432,6 +440,7 @@ def resolve_master_blueprint(
     ai_model_pref: str = "Claude Opus 5.5",  # Kept for API compatibility
     deterministic_cuts: List[Dict[str, Any]] = None,
     is_faceless: bool = False,
+    is_tech_explainer: bool = False,
 ) -> EditList:
     """
     Deterministic conflict resolver — replaces the 4th LLM call.
@@ -445,12 +454,16 @@ def resolve_master_blueprint(
     5. Preserves all carefully validated timestamps and targets with 0 hallucination.
     6. Enforces density budgeting and variety constraints (adapted for faceless vs talking head).
     """
-    if not is_faceless and unified_analysis_json:
+    if not is_tech_explainer and unified_analysis_json:
         try:
             import json
             ua = json.loads(unified_analysis_json)
+            if ua.get("beat_sheet", {}).get("is_tech_explainer", False):
+                is_tech_explainer = True
             vt = str(ua.get("video_type") or ua.get("settings", {}).get("video_type", "")).lower()
-            if "faceless" in vt:
+            if "tech_explainer" in vt or "tech" in vt:
+                is_tech_explainer = True
+            elif "faceless" in vt:
                 is_faceless = True
         except Exception:
             pass
@@ -537,7 +550,7 @@ def resolve_master_blueprint(
 
     # Apply density budgeting pass
     max_duration = max([e.end or (e.start or 0.0) + 3.0 for e in all_edits], default=300.0)
-    budgeted = enforce_density_budgeting(all_edits, total_duration=max_duration, is_faceless=is_faceless)
+    budgeted = enforce_density_budgeting(all_edits, total_duration=max_duration, is_faceless=is_faceless, is_tech_explainer=is_tech_explainer)
 
     if is_faceless:
         # Gapless snapping for faceless videos: eliminate unwanted flashing gaps between visual cuts

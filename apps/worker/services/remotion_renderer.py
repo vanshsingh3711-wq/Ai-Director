@@ -71,6 +71,13 @@ ALLOWED_COMPOSITIONS = {
     "kinetic_text",
     "app_screen_upload",
     "app-screen-upload",
+    # 9:16 & 16:9 Roboverse-Style Tech Explainer 3D Pack
+    "device_mockup_phone",
+    "device-mockup-phone",
+    "isometric_card_deck",
+    "isometric-card-deck",
+    "orbital_agent_badge",
+    "orbital-agent-badge",
     "animated_counter",
     "animated-counter",
     "showdown_duel",
@@ -445,6 +452,13 @@ def build_props_from_edit(edit: Dict[str, Any]) -> Dict[str, Any]:
         "iceberg-model": {"title": "title", "subtitle": "subtitle", "surfaceTitle": "surfaceTitle", "surfaceItems": "surfaceItems", "underwaterTitle": "underwaterTitle", "underwaterItems": "underwaterItems"},
         "pros_cons_comparison": {"title": "title", "subtitle": "subtitle", "prosTitle": "prosTitle", "prosList": "prosList", "consTitle": "consTitle", "consList": "consList", "verdictBadge": "verdictBadge"},
         "pros-cons-comparison": {"title": "title", "subtitle": "subtitle", "prosTitle": "prosTitle", "prosList": "prosList", "consTitle": "consTitle", "consList": "consList", "verdictBadge": "verdictBadge"},
+        # 9:16 & 16:9 Roboverse-Style Tech Explainer 3D & UI Pack
+        "device_mockup_phone": {"appTitle": "appTitle", "botName": "botName", "avatarText": "avatarText", "accentColor": "accentColor", "messages": "messages", "tiltAngleY": "tiltAngleY", "tiltAngleX": "tiltAngleX"},
+        "device-mockup-phone": {"appTitle": "appTitle", "botName": "botName", "avatarText": "avatarText", "accentColor": "accentColor", "messages": "messages", "tiltAngleY": "tiltAngleY", "tiltAngleX": "tiltAngleX"},
+        "isometric_card_deck": {"headline": "headline", "subheadline": "subheadline", "cards": "cards", "accentColor": "accentColor", "rotationY": "rotationY", "rotationX": "rotationX"},
+        "isometric-card-deck": {"headline": "headline", "subheadline": "subheadline", "cards": "cards", "accentColor": "accentColor", "rotationY": "rotationY", "rotationX": "rotationX"},
+        "orbital_agent_badge": {"coreTitle": "coreTitle", "coreSubtitle": "coreSubtitle", "statusBadge": "statusBadge", "agent1": "agent1", "agent2": "agent2", "agent3": "agent3", "agent4": "agent4", "accentColor": "accentColor"},
+        "orbital-agent-badge": {"coreTitle": "coreTitle", "coreSubtitle": "coreSubtitle", "statusBadge": "statusBadge", "agent1": "agent1", "agent2": "agent2", "agent3": "agent3", "agent4": "agent4", "accentColor": "accentColor"},
     }
 
     prop_map = PROP_MAPS.get(comp_id, {})

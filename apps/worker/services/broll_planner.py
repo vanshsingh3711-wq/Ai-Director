@@ -16,7 +16,7 @@ RULES:
 2. 'b_roll': Use when visually reinforcing an important concept. Provide 'trigger_id', 'search_query', and a strong 'reason'.
 3. **HIGH RETENTION PACING (CRITICAL):** This is a high-energy TikTok/Reels style video. Visuals must change every 1.5 to 3.0 seconds (optimal clip length is 2.0 to 2.5s). Never let a single visual linger past 3 seconds without a cut or motion graphic overlay.
 4. **EXACT METAPHOR & WORD MAPPING:** Never stretch a single b_roll clip over multiple different sentences or metaphors. If sentence 1 is about 'searching for a needle in a haystack' and sentence 2 is 'just buy the whole haystack', output TWO distinct b_roll events (e.g., magnifying glass close-up inspection ➔ expansive skyline/harbor). Match the stock footage visual directly to the words being spoken.
-5. **SMOOTH DISSOLVES & TRANSITIONS**: Provide a `transition` (default to 'fade' or 'crossfade') to ensure buttery-smooth scene dissolves and eliminate abrupt hard-cut flashing. Provide other transitions ('slide', 'zoom', 'wipe') when appropriate for energetic scene shifts.
+5. **CLEAN TRANSITIONS & PACING**: Provide a `transition` (default to 'cut' for fast-paced vertical video; use 'slide' or 'zoom' for energetic shifts). Never dip or fade to black in the middle of speech.
 
 OUTPUT SCHEMA (JSON):
 {{
@@ -26,7 +26,7 @@ OUTPUT SCHEMA (JSON):
       "trigger_id": "ID_01 (Required: Use the exact chunk ID from the transcript)",
       "start": 0.0, "end": 3.75,
       "search_query": "B-roll keywords",
-      "transition": "fade",
+      "transition": "cut",
       "reason": "Why this b-roll works here"
     }}
   ]

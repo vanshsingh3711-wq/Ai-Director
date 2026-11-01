@@ -148,7 +148,7 @@ export default function CreateWizardPage() {
           reason: "Please upload your speaking footage (.mp4, .mov, etc.) before continuing.",
         };
       }
-      if ((creationPath === "faceless" || creationPath === "template") && (!script.trim() || wordCount < 3)) {
+      if ((creationPath === "faceless" || creationPath === "template" || creationPath === "tech_explainer") && (!script.trim() || wordCount < 3)) {
         return {
           valid: false,
           reason: "Please provide a script with at least 3 words for AI directing.",
@@ -182,7 +182,7 @@ export default function CreateWizardPage() {
       return;
     }
 
-    if ((creationPath === "faceless" || creationPath === "template") && (!script.trim() || wordCount < 3)) {
+    if ((creationPath === "faceless" || creationPath === "template" || creationPath === "tech_explainer") && (!script.trim() || wordCount < 3)) {
       error("Incomplete Script", "A script of at least 3 words is required to generate this video.");
       return;
     }
@@ -257,7 +257,11 @@ export default function CreateWizardPage() {
           title: title.trim() || "Untitled AI Video",
           source_url: sourceUrl,
           video_type:
-            creationPath === "upload" ? "talking_head" : "faceless_short",
+            creationPath === "upload"
+              ? "talking_head"
+              : creationPath === "tech_explainer"
+              ? "tech_explainer"
+              : "faceless_short",
           clerk_id: "user_default",
           email: "user@example.com",
           settings: {
@@ -360,6 +364,15 @@ export default function CreateWizardPage() {
             selectedPath={creationPath}
             onSelect={(path) => {
               setCreationPath(path);
+              if (path === "tech_explainer") {
+                setTitle("Autonomous AI Agents Explained");
+                setScript(
+                  "How do autonomous AI agents actually execute real-world tasks without hallucinating? First, your phone triggers the request through a lightweight mobile agent. Behind the scenes, the orchestrator spins up isolated Docker containers. A recursive reasoning loop checks every terminal command against a deterministic test suite. And if an anomaly occurs, the security sentinel isolates the container in forty-two milliseconds."
+                );
+                setAspectRatio("9:16");
+                setVideoStyle("viral");
+                setCaptionPreset("modern_clean");
+              }
               setCurrentStep(2);
             }}
           />

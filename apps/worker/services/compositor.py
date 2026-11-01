@@ -829,7 +829,7 @@ def render_video_pipeline(
     if not kept_segments:
         kept_segments = [{"start": 0.0, "end": total_duration, "chunk_id": "FULL", "actions": [], "is_cut": False}]
 
-    if settings.get("continuous_composition") or settings.get("SINGLE_PASS_COMPOSITION"):
+    if settings.get("continuous_composition") or settings.get("SINGLE_PASS_COMPOSITION") or settings.get("is_tech_explainer"):
         _log("TIMELINE", "Using continuous single-pass composition (zero segment chopping, zero concat blinking)")
         full_actions = []
         for e in edits:
@@ -1071,13 +1071,31 @@ def render_video_pipeline(
 
                         mg_v = f"[mg_{mg_count}_v]"
                         frag_dur = max(0.1, rel_end - rel_start)
-                        mg_fade_in = min(0.35, frag_dur / 4.0)
-                        mg_fade_out = min(0.35, frag_dur / 4.0)
-                        mg_out_st = max(0.0, frag_dur - mg_fade_out)
+
+                        is_continuous_flow = bool(
+                            settings.get("continuous_composition") or
+                            settings.get("SINGLE_PASS_COMPOSITION") or
+                            settings.get("is_tech_explainer")
+                        )
+                        if is_continuous_flow:
+                            # In continuous tech explainer mode, avoid dipping to black between consecutive scenes.
+                            # Remotion components handle entrance/exit spring animations natively.
+                            mg_fade_in = min(0.2, frag_dur / 4.0) if rel_start <= 0.05 else 0.0
+                            mg_fade_out = min(0.2, frag_dur / 4.0) if rel_end >= (seg["end"] - seg["start"] - 0.15) else 0.0
+                        else:
+                            mg_fade_in = min(0.35, frag_dur / 4.0)
+                            mg_fade_out = min(0.35, frag_dur / 4.0)
+
+                        fade_filters = []
+                        if mg_fade_in > 0:
+                            fade_filters.append(f"fade=t=in:st=0:d={mg_fade_in:.3f}:alpha=1")
+                        if mg_fade_out > 0:
+                            mg_out_st = max(0.0, frag_dur - mg_fade_out)
+                            fade_filters.append(f"fade=t=out:st={mg_out_st:.3f}:d={mg_fade_out:.3f}:alpha=1")
+
+                        fade_chain = ("," + ",".join(fade_filters)) if fade_filters else ""
                         filter_str.append(
-                            f"[{input_idx}:v]format=yuva420p,"
-                            f"fade=t=in:st=0:d={mg_fade_in:.3f}:alpha=1,"
-                            f"fade=t=out:st={mg_out_st:.3f}:d={mg_fade_out:.3f}:alpha=1,"
+                            f"[{input_idx}:v]format=yuva420p{fade_chain},"
                             f"setpts=PTS-STARTPTS+{rel_start}/TB{mg_v};"
                         )
                         filter_str.append(f"{current_v}{mg_v}overlay=x=0:y=0:enable='between(t,{rel_start},{rel_end})':eof_action=pass[with_mg_{mg_count}];")
@@ -1109,14 +1127,15 @@ def render_video_pipeline(
                         offset = a.get("seg_overlap_start", seg["start"]) - a.get("original_start", seg["start"])
                         cmd.extend(["-ss", str(max(0, offset)), "-an", "-t", str(rel_end - rel_start), "-i", broll_path_a])
                         bv = f"[broll_{broll_count}_v]"
-                        broll_transition = a.get("transition", "fade")
+                        broll_transition = (a.get("transition") or "cut").lower()
                         frag_dur = max(0.1, rel_end - rel_start)
-                        fade_in_d = min(0.35, frag_dur / 3.0)
-                        fade_out_d = min(0.35, frag_dur / 3.0)
-                        fade_out_st = max(0.0, frag_dur - fade_out_d)
 
                         broll_filter = f"[{input_idx}:v]fps={source_fps},scale={target_w}:{target_h}:force_original_aspect_ratio=increase,crop={target_w}:{target_h}"
-                        broll_filter += f",fade=t=in:st=0:d={fade_in_d:.3f},fade=t=out:st={fade_out_st:.3f}:d={fade_out_d:.3f}"
+                        if broll_transition in ("fade_to_black", "fadeblack"):
+                            fade_in_d = min(0.25, frag_dur / 3.0)
+                            fade_out_d = min(0.25, frag_dur / 3.0)
+                            fade_out_st = max(0.0, frag_dur - fade_out_d)
+                            broll_filter += f",fade=t=in:st=0:d={fade_in_d:.3f},fade=t=out:st={fade_out_st:.3f}:d={fade_out_d:.3f}"
                         broll_filter += f",setpts=PTS-STARTPTS+{rel_start}/TB{bv};"
                         filter_str.append(broll_filter)
 
@@ -1230,8 +1249,8 @@ def render_video_pipeline(
         if broll_path:
             cmd.extend(["-an", "-i", broll_path])
             broll_filter = f"[{input_idx}:v]fps={source_fps},scale={target_w}:{target_h}:force_original_aspect_ratio=increase,crop={target_w}:{target_h},setpts=PTS-STARTPTS"
-            if broll_transition in ["fade", "crossfade", "morph"]:
-                broll_filter += ",fade=t=in:st=0:d=0.5"
+            if broll_transition in ["fade_to_black", "fadeblack"]:
+                broll_filter += ",fade=t=in:st=0:d=0.3"
             broll_filter += f"[broll_v];"
             filter_str.append(broll_filter)
 
@@ -1320,25 +1339,29 @@ def render_video_pipeline(
                 current_a = "[a_out_sfx]"
                 input_idx += 1
 
-        # Boundary transition smoothing across cut boundaries
+        # Boundary transition smoothing across cut boundaries (only when fade to black is explicitly chosen)
         if seg.get("transition_out"):
             t_out = seg["transition_out"]
-            dur_out = min(float(t_out.get("duration", 0.5) or 0.5) / 2.0, duration / 2.0)
-            if dur_out > 0.05:
-                st_out = max(0.0, duration - dur_out)
-                filter_str.append(f"{current_v}fade=t=out:st={st_out:.3f}:d={dur_out:.3f}[v_out_fade];")
-                current_v = "[v_out_fade]"
-                filter_str.append(f"{current_a}afade=t=out:st={st_out:.3f}:d={dur_out:.3f}[a_out_fade];")
-                current_a = "[a_out_fade]"
+            preset = (t_out.get("preset") or "").lower()
+            if preset in ("fade_to_black", "fadeblack"):
+                dur_out = min(float(t_out.get("duration", 0.5) or 0.5) / 2.0, duration / 2.0)
+                if dur_out > 0.05:
+                    st_out = max(0.0, duration - dur_out)
+                    filter_str.append(f"{current_v}fade=t=out:st={st_out:.3f}:d={dur_out:.3f}[v_out_fade];")
+                    current_v = "[v_out_fade]"
+                    filter_str.append(f"{current_a}afade=t=out:st={st_out:.3f}:d={dur_out:.3f}[a_out_fade];")
+                    current_a = "[a_out_fade]"
 
         if seg.get("transition_in"):
             t_in = seg["transition_in"]
-            dur_in = min(float(t_in.get("duration", 0.5) or 0.5) / 2.0, duration / 2.0)
-            if dur_in > 0.05:
-                filter_str.append(f"{current_v}fade=t=in:st=0:d={dur_in:.3f}[v_in_fade];")
-                current_v = "[v_in_fade]"
-                filter_str.append(f"{current_a}afade=t=in:st=0:d={dur_in:.3f}[a_in_fade];")
-                current_a = "[a_in_fade]"
+            preset = (t_in.get("preset") or "").lower()
+            if preset in ("fade_to_black", "fadeblack"):
+                dur_in = min(float(t_in.get("duration", 0.5) or 0.5) / 2.0, duration / 2.0)
+                if dur_in > 0.05:
+                    filter_str.append(f"{current_v}fade=t=in:st=0:d={dur_in:.3f}[v_in_fade];")
+                    current_v = "[v_in_fade]"
+                    filter_str.append(f"{current_a}afade=t=in:st=0:d={dur_in:.3f}[a_in_fade];")
+                    current_a = "[a_in_fade]"
 
         filter_str.append(f"{current_v}format=yuv420p[vout]")
 

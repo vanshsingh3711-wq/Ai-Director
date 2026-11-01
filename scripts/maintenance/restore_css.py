@@ -1,7 +1,8 @@
 import os
 import glob
 
-html_dir = "apps/worker/services/motion_html"
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+html_dir = os.path.join(REPO_ROOT, "apps/worker/services/motion_html")
 
 unified_premium_css = """
     /* Premium Vector Motion Background */

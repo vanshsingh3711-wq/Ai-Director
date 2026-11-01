@@ -2,7 +2,8 @@ import os
 import glob
 import re
 
-html_dir = "apps/worker/services/motion_html"
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+html_dir = os.path.join(REPO_ROOT, "apps/worker/services/motion_html")
 
 opus_css = """
     /* Opus Engine: Phase 1 (Clean Environment) */

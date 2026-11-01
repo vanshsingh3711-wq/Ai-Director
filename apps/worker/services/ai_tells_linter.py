@@ -314,9 +314,20 @@ def lint_and_guard_blueprint(
         if action == "motion_graphics":
             mg_type = e.get("motion_graphics_type", "hero_reveal")
 
-            # 1. Pacing: static-hold-cap
+            # 1. Pacing: static-hold-cap (Only for static cards; dynamic 3D/UI components are continuous)
+            DYNAMIC_ANIMATED_COMPONENTS = {
+                "device_mockup_phone", "device-mockup-phone",
+                "isometric_card_deck", "isometric-card-deck",
+                "orbital_agent_badge", "orbital-agent-badge",
+                "exploded_layer_stack", "exploded-layer-stack",
+                "mind_map_node_web", "mind-map-node-web",
+                "tactile_checklist_stamp", "tactile-checklist-stamp",
+                "urgency_dial_gauge", "urgency-dial-gauge",
+                "architecture_pipeline", "architecture-pipeline",
+                "chrono_dial_clock", "chrono-dial-clock",
+            }
             dur = t_end_val - t_start_val
-            if dur > MAX_STATIC_HOLD_SEC:
+            if dur > MAX_STATIC_HOLD_SEC and mg_type not in DYNAMIC_ANIMATED_COMPONENTS:
                 new_end = t_start_val + MAX_STATIC_HOLD_SEC
                 e["end"] = new_end
                 issues.append(LinterIssue(

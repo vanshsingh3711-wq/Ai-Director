@@ -44,8 +44,11 @@ export const BottleneckConstriction: React.FC<BottleneckConstrictionProps> = ({
   warningColor = '#F43F5E', // Rose/Amber hazard
 }) => {
   const frame = useCurrentFrame();
-  const { fps, durationInFrames } = useVideoConfig();
+  const { fps, durationInFrames, width: videoW, height: videoH } = useVideoConfig();
   const exitOpacity = useExitFade(frame, durationInFrames, 15);
+
+  const isPortrait = videoW < videoH;
+  const contentScale = isPortrait ? Math.min(1.0, (videoW - 60) / 1760) : 1.0;
 
   // Global entrance animation
   const containerEntrance = spring({
@@ -168,7 +171,8 @@ export const BottleneckConstriction: React.FC<BottleneckConstrictionProps> = ({
           background: 'linear-gradient(145deg, rgba(12, 14, 20, 0.96) 0%, rgba(6, 7, 11, 0.98) 100%)',
           border: '1px solid rgba(255, 255, 255, 0.08)',
           boxShadow: '0 30px 80px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
-          transform: `scale(${interpolate(containerEntrance, [0, 1], [0.96, 1])})`,
+          transform: `scale(${contentScale * interpolate(containerEntrance, [0, 1], [0.96, 1])})`,
+          transformOrigin: 'center center',
           opacity: containerEntrance,
           overflow: 'hidden',
           display: 'flex',

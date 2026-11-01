@@ -1,5 +1,7 @@
 import os
 import subprocess
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+sys.path.insert(0, os.path.join(ROOT_DIR, "apps/worker"))
 from services.compositor import render_video_pipeline
 
 def create_color_video(path, color, duration=20):

@@ -45,7 +45,7 @@ class CreateVideoJobRequest(BaseModel):
                 raise ValueError(f"Invalid source_url protocol. Allowed schemes: {allowed_schemes}")
 
         # 2. Faceless videos require a script or topic
-        elif self.video_type == VideoType.FACELESS_SHORT:
+        elif self.video_type in (VideoType.FACELESS_SHORT, VideoType.TECH_EXPLAINER):
             settings_dict = self.settings or {}
             script_text = (
                 settings_dict.get("script_text")
@@ -54,7 +54,8 @@ class CreateVideoJobRequest(BaseModel):
                 or ""
             )
             if not isinstance(script_text, str) or not script_text.strip():
-                raise ValueError("Faceless short videos require 'script_text' in job settings.")
+                type_name = "Tech explainer" if self.video_type == VideoType.TECH_EXPLAINER else "Faceless short"
+                raise ValueError(f"{type_name} videos require 'script_text' or 'topic' in job settings.")
 
         # 3. Guard against SSRF / local path injection in source_url
         if self.source_url:
@@ -147,13 +148,19 @@ def create_video_job(
         print(f"[API: VIDEOS] 👤 Created new User profile: {user.id} ({email})")
 
     # Create VideoJob
+    job_settings = dict(payload.settings or {})
+    if payload.video_type == VideoType.TECH_EXPLAINER:
+        if "aspect_ratio" not in job_settings:
+            job_settings["aspect_ratio"] = "9:16"
+        job_settings["is_faceless"] = True
+
     job = VideoJob(
         user_id=user.id,
         title=payload.title,
         source_url=payload.source_url,
         video_type=payload.video_type,
         status=VideoJobStatus.QUEUED,
-        settings=payload.settings,
+        settings=job_settings,
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
     )
@@ -810,11 +817,17 @@ def get_video_timeline(
 
     # 1. Check if edit_decision_list has persisted timeline_project
     is_faceless_job = (
-        job.video_type == VideoType.FACELESS_SHORT
+        job.video_type in (VideoType.FACELESS_SHORT, VideoType.TECH_EXPLAINER)
         or "faceless" in str(job.video_type).lower()
+        or "tech_explainer" in str(job.video_type).lower()
         or bool((job.settings or {}).get("is_faceless"))
     )
-    default_caption_y = 50 if is_faceless_job else 75
+    if job.video_type == VideoType.TECH_EXPLAINER:
+        default_caption_y = 80
+    elif is_faceless_job:
+        default_caption_y = 50
+    else:
+        default_caption_y = 75
 
     if job.edit_decision_list:
         try:

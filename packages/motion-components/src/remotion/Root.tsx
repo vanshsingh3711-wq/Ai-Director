@@ -60,6 +60,9 @@ import { DecisionTreeFork } from './compositions/DecisionTreeFork';
 import { RadarSpiderChart } from './compositions/RadarSpiderChart';
 import { ParetoPowerLaw } from './compositions/ParetoPowerLaw';
 import { ChronoDialClock } from './compositions/ChronoDialClock';
+import { DeviceMockupPhone } from './compositions/DeviceMockupPhone';
+import { IsometricCardDeck } from './compositions/IsometricCardDeck';
+import { OrbitalAgentBadge } from './compositions/OrbitalAgentBadge';
 
 // Remotion Root — all compositions registered here
 // Python calls: npx remotion render src/remotion/Root.tsx <ID> --props='{}' out.mov
@@ -645,5 +648,58 @@ export const RemotionRoot: React.FC = () => (
 
     {/* Visual Effects Pack */}
     <Composition id="effect-overlay" component={EffectOverlay as any} durationInFrames={150} fps={FPS} width={W} height={H} calculateMetadata={getMeta} defaultProps={{ effectType: 'rgb_glitch', intensity: 80 }} />
-  </>
+
+    {/* 9:16 & 16:9 Roboverse-Style Tech Explainer 3D Pack */}
+    <Composition
+      id="device-mockup-phone"
+      component={DeviceMockupPhone as any}
+      durationInFrames={150}
+      fps={FPS}
+      width={W}
+      height={H}
+      calculateMetadata={getMeta}
+      defaultProps={{
+        appTitle: 'AI ORCHESTRATOR',
+        botName: 'NexusAssist Bot',
+        avatarText: 'NA',
+        tiltAngleY: -14,
+        tiltAngleX: 7,
+        accentColor: '#00e5ff',
+      }}
+    />
+
+    <Composition
+      id="isometric-card-deck"
+      component={IsometricCardDeck as any}
+      durationInFrames={150}
+      fps={FPS}
+      width={W}
+      height={H}
+      calculateMetadata={getMeta}
+      defaultProps={{
+        headline: 'AUTONOMOUS SWARM INFRASTRUCTURE',
+        subheadline: 'DOCKER CLUSTERS RUNNING CONCURRENTLY WITH PERSISTENT AGENTS',
+        rotationY: -18,
+        rotationX: 10,
+        accentColor: '#00e5ff',
+      }}
+    />
+
+    <Composition
+      id="orbital-agent-badge"
+      component={OrbitalAgentBadge as any}
+      durationInFrames={150}
+      fps={FPS}
+      width={W}
+      height={H}
+      calculateMetadata={getMeta}
+      defaultProps={{
+        centerTitle: 'AI Agent',
+        centerSubtitle: 'AUTONOMOUS REASONING CORE',
+        badgeLabel: 'SYNCHRONIZED SWARM',
+        nodesCount: 8,
+        accentColor: '#00e5ff',
+      }}
+    />
+</>
 );

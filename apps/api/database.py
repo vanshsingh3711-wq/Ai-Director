@@ -20,9 +20,15 @@ engine = create_engine(
 
 
 def _ensure_schema_migrations(target_engine) -> None:
-    """Safely adds missing columns to existing tables for backwards compatibility."""
+    """Safely adds missing columns and enum values to existing tables for backwards compatibility."""
     from sqlalchemy import inspect, text
     try:
+        if target_engine.dialect.name == "postgresql":
+            with target_engine.begin() as conn:
+                try:
+                    conn.execute(text("ALTER TYPE videotype ADD VALUE IF NOT EXISTS 'tech_explainer'"))
+                except Exception as enum_err:
+                    pass
         inspector = inspect(target_engine)
         tables = inspector.get_table_names()
         if "social_accounts" in tables:

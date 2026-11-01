@@ -200,6 +200,18 @@ ai-content-manager/
 │           ├── effects/            # Highlight, zoom, underline
 │           └── animations/         # Fade, slide, scale, typewriter
 │
+├── docs/                           # Architecture, API docs & system references
+│   ├── system_architecture.md
+│   ├── api_documentation.md
+│   ├── video_pipeline_flow.md
+│   └── assets/                     # Architecture & UI diagrams
+│
+├── scripts/                        # Production & developer utility scripts
+│   ├── demos/                      # Standalone video generation showcases
+│   ├── benchmarks/                 # Remotion & Canvas performance runners
+│   ├── maintenance/                # Engine & CSS migration scripts
+│   └── tests/                      # Component & archetype test harnesses
+│
 ├── .github/workflows/ci.yml        # CI — tests, build, docker
 ├── docker-compose.yml              # Local PostgreSQL & Redis
 └── package.json                    # npm workspaces root

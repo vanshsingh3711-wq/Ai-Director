@@ -45,8 +45,11 @@ export const DecisionTreeFork: React.FC<DecisionTreeForkProps> = ({
   accentColor = '#00E5FF',
 }) => {
   const frame = useCurrentFrame();
-  const { fps, durationInFrames } = useVideoConfig();
+  const { fps, durationInFrames, width: videoW, height: videoH } = useVideoConfig();
   const exitOpacity = useExitFade(frame, durationInFrames, 15);
+
+  const isPortrait = videoW < videoH;
+  const contentScale = isPortrait ? Math.min(1.0, (videoW - 60) / 1760) : 1.0;
 
   // Global container entrance
   const containerEntrance = spring({
@@ -134,7 +137,8 @@ export const DecisionTreeFork: React.FC<DecisionTreeForkProps> = ({
           padding: '44px 54px',
           boxSizing: 'border-box',
           overflow: 'hidden',
-          transform: `scale(${containerEntrance})`,
+          transform: `scale(${contentScale * containerEntrance})`,
+          transformOrigin: 'center center',
           opacity: containerEntrance,
         }}
       >

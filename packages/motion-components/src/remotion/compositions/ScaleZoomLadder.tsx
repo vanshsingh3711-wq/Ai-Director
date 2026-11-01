@@ -49,8 +49,11 @@ export const ScaleZoomLadder: React.FC<ScaleZoomLadderProps> = ({
   step3Color = '#F43F5E',
 }) => {
   const frame = useCurrentFrame();
-  const { fps, durationInFrames } = useVideoConfig();
+  const { fps, durationInFrames, width: videoW, height: videoH } = useVideoConfig();
   const exitOpacity = useExitFade(frame, durationInFrames, 15);
+
+  const isPortrait = videoW < videoH;
+  const contentScale = isPortrait ? Math.min(1.0, (videoW - 60) / 1760) : 1.0;
 
   // Global container entrance
   const containerEntrance = spring({
@@ -131,7 +134,8 @@ export const ScaleZoomLadder: React.FC<ScaleZoomLadderProps> = ({
           padding: '48px 56px',
           boxSizing: 'border-box',
           overflow: 'hidden',
-          transform: `scale(${containerEntrance})`,
+          transform: `scale(${contentScale * containerEntrance})`,
+          transformOrigin: 'center center',
           opacity: containerEntrance,
         }}
       >

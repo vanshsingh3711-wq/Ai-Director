@@ -91,7 +91,7 @@ export function ReviewSummary({
             Creation Mode
           </span>
           <div className="text-sm font-semibold text-white capitalize mt-0.5">
-            {creationPath}
+            {creationPath === "tech_explainer" ? "Tech Explainer (3D & UI)" : creationPath}
           </div>
         </div>
 

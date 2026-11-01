@@ -11,6 +11,39 @@ def infer_suggested_template(beat: Dict[str, Any]) -> str:
     combined = f"{text} {focus}"
     role = beat.get("role", "").lower()
 
+    # 0. Roboverse Tech Explainer 3D & UI Pack
+    # Option C (device_mockup_phone): smartphone, mobile app, phone, mobile assistant, push notification, handheld
+    if any(k in combined for k in ["smartphone", "phone", "mobile", "ios", "android", "chat bot", "assistant on your phone", "messaging", "push notification"]):
+        return "device_mockup_phone"
+
+    # Exploded Layer Stack: foundational level, cognitive architecture, layers, stack, tiers, substrate
+    if any(k in combined for k in ["foundational level", "cognitive architecture", "layer stack", "layers of reasoning", "tiers", "substrate"]):
+        return "exploded_layer_stack"
+
+    # Tactile Checklist Stamp: test suite, deterministic test, checks every, checklist, assertions, pass/fail
+    if any(k in combined for k in ["deterministic test", "test suite", "checks every", "checklist", "assertions", "terminal command against"]):
+        return "tactile_checklist_stamp"
+
+    # Security Sentinel / Anomaly (urgency_dial_gauge)
+    if any(k in combined for k in ["security sentinel", "anomaly", "quarantine", "threat", "breach", "isolates the container"]):
+        return "urgency_dial_gauge"
+
+    # Swarms / Mesh / Network (mind_map_node_web)
+    if any(k in combined for k in ["developer swarms", "swarm", "swarms", "multi-agent mesh", "node web", "honeycomb"]):
+        return "mind_map_node_web"
+
+    # Latency / speed metric
+    if any(k in combined for k in ["milliseconds", "latency", "42 ms", "forty-two"]):
+        return "metric_reveal"
+
+    # Option B (isometric_card_deck): docker, kubernetes, container, containers, backend, terminal, cluster, server, orchestrator, infrastructure
+    if any(k in combined for k in ["docker", "kubernetes", "container", "containers", "orchestrator", "cluster", "backend", "infrastructure"]):
+        return "isometric_card_deck"
+
+    # Agent Nucleus (orbital_agent_badge): nucleus, core reasoning, agent loop, autonomous agent, hallucinating
+    if any(k in combined for k in ["nucleus", "core reasoning", "autonomous ai agents", "autonomous agent", "without hallucinating", "reasoning loop"]):
+        return "orbital_agent_badge"
+
     # 1. Compounding, Formulas & Math Systems (Rule of 72, growth formulas, doubling calculations)
     if any(k in combined for k in ["rule of 72", "formula", "compound", "divide it by", "rate of return", "doubling", "years to double", "exponential"]):
         return "compound_formula"
@@ -97,7 +130,15 @@ def assign_visual_treatments(
         beat["emphasis_end"] = end
 
         is_faceless = settings.get("is_faceless", False)
-        if importance <= 2:
+        is_tech_explainer = settings.get("is_tech_explainer", False)
+        combined = f"{beat.get('text', '')} {beat.get('focus_phrase', '')}".lower()
+
+        if is_tech_explainer:
+            # Tech Explainer is 100% studio motion graphics on a dark radial canvas with 0 stock B-roll
+            # Every beat is a rich 3D/UI motion graphic (no plain kinetic text cards)
+            beat["treatment"] = "motion_graphic"
+            beat["treatment_reason"] = "Tech Explainer Studio Motion Graphic"
+        elif importance <= 2:
             beat["treatment"] = "b_roll" if is_faceless else "none"
             beat["treatment_reason"] = "Importance <= 2 (Faceless b-roll fallback)" if is_faceless else "Importance <= 2"
         elif role in ["statistic", "comparison", "list"]:
@@ -119,6 +160,9 @@ def assign_visual_treatments(
 
         if beat["treatment"] in ["motion_graphic", "kinetic_text"]:
             beat["suggested_template"] = infer_suggested_template(beat)
+
+    if settings.get("is_tech_explainer", False):
+        return beat_sheet, log_table
 
     # Pass 2: Enforce max consecutive treated beats (demote lowest importance in the run)
     is_faceless = settings.get("is_faceless", False)

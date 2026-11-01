@@ -9,7 +9,7 @@ import sqlite3
 import gc
 from typing import Dict, List, Any, Optional
 
-ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 # Ensure sufficient temp space for Remotion and FFmpeg temp files
 os.environ["TMPDIR"] = os.path.join(ROOT_DIR, "media_temp/tmp")
 os.environ["TEMP"] = os.environ["TMPDIR"]

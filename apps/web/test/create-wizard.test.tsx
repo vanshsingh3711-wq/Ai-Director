@@ -30,14 +30,18 @@ describe("Phase 4: Create Flow Wizard", () => {
   });
 
   describe("PathSelector Component", () => {
-    it("renders all four creation paths and triggers selection callback", () => {
+    it("renders all creation paths including Tech Explainer and triggers selection callback", () => {
       const handleSelect = vi.fn();
       render(<PathSelector selectedPath="faceless" onSelect={handleSelect} />);
 
       expect(screen.getByText("Faceless AI Video")).toBeInTheDocument();
+      expect(screen.getByText("Tech Explainer (3D & UI)")).toBeInTheDocument();
       expect(screen.getByText("Upload & Enhance Footage")).toBeInTheDocument();
       expect(screen.getByText("Viral Presets Gallery")).toBeInTheDocument();
       expect(screen.getByText("From Article or URL")).toBeInTheDocument();
+
+      fireEvent.click(screen.getByText("Tech Explainer (3D & UI)"));
+      expect(handleSelect).toHaveBeenCalledWith("tech_explainer");
 
       fireEvent.click(screen.getByText("Upload & Enhance Footage"));
       expect(handleSelect).toHaveBeenCalledWith("upload");
@@ -303,6 +307,27 @@ describe("Phase 4: Create Flow Wizard", () => {
       expect(
         screen.getByText(/Please upload your speaking footage/i)
       ).toBeInTheDocument();
+    });
+
+    it("selects Tech Explainer path, auto-populates 9:16 settings and advances to review", () => {
+      render(
+        <ToastProvider>
+          <CreateWizardPage />
+        </ToastProvider>
+      );
+
+      // Select Tech Explainer (automatically advances to Step 2)
+      fireEvent.click(screen.getByText("Tech Explainer (3D & UI)"));
+
+      expect(screen.getByText("Step 2 of 3")).toBeInTheDocument();
+      expect(screen.getByDisplayValue("Autonomous AI Agents Explained")).toBeInTheDocument();
+
+      // Proceed to Step 3
+      fireEvent.click(
+        screen.getByRole("button", { name: /continue to review/i })
+      );
+      expect(screen.getByText("Review Video Configuration")).toBeInTheDocument();
+      expect(screen.getByText("Tech Explainer (3D & UI)")).toBeInTheDocument();
     });
   });
 });

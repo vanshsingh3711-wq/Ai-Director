@@ -37,7 +37,7 @@ interface VideoJob {
   title: string;
   source_url: string;
   rendered_url?: string | null;
-  video_type: "talking_head" | "faceless_short";
+  video_type: "talking_head" | "faceless_short" | "tech_explainer";
   status: "QUEUED" | "DOWNLOADING" | "TRANSCRIBING" | "AI_DIRECTING" | "RENDERING" | "PUBLISHING" | "COMPLETED" | "FAILED";
   edit_decision_list?: string | null;
   error_log?: string | null;
@@ -154,7 +154,7 @@ export function VideoDetailModal({ video, isOpen, onClose }: VideoDetailModalPro
               </span>
               <span className="text-neutral-700">·</span>
               <span className="text-xs text-neutral-500 uppercase tracking-wider font-medium">
-                {video.video_type === "talking_head" ? "Talking Head" : "Faceless Short"}
+                {video.video_type === "talking_head" ? "Talking Head" : video.video_type === "tech_explainer" ? "Tech Explainer" : "Faceless Short"}
               </span>
               <span className="text-neutral-700">·</span>
               <span className="text-xs text-neutral-500 uppercase tracking-wider font-medium font-mono">

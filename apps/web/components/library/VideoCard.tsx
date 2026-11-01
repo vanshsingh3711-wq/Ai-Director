@@ -30,7 +30,7 @@ export function VideoCard({
     }
   } catch {}
 
-  const aspectRatio = parsedSettings.aspect_ratio || (video.video_type === "faceless_short" ? "9:16" : "16:9");
+  const aspectRatio = parsedSettings.aspect_ratio || ((video.video_type === "faceless_short" || video.video_type === "tech_explainer") ? "9:16" : "16:9");
 
   const getStatusVariant = (status: VideoStatus) => {
     switch (status) {

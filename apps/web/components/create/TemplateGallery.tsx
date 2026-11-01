@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Sparkles, Clock, Check, ArrowRight, Zap, BookOpen, TrendingUp, Cpu } from "lucide-react";
+import { Sparkles, Clock, Check, ArrowRight, Zap, BookOpen, TrendingUp, Cpu, Smartphone } from "lucide-react";
 import { Card, Badge, Button } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
@@ -60,6 +60,20 @@ export const PRESET_TEMPLATES: TemplateItem[] = [
     sampleScript:
       "Three breakthroughs in autonomous AI coding you completely missed this week. First: models can now self-correct subtle memory leaks across entire repositories. Second: subagent orchestration now runs fifty times faster using persistent IPC sockets. And third: multi-modal video compositing happens in real time in your browser.",
     icon: Cpu,
+  },
+  {
+    id: "roboverse_tech_explainer",
+    title: "3D Tech Explainer (Roboverse Style)",
+    category: "AI & Tech Architecture",
+    duration: "45s",
+    aspectRatio: "9:16",
+    videoStyle: "viral",
+    captionPreset: "modern_clean",
+    description:
+      "Studio radial vignette backdrop with photorealistic 3D phone mockups, floating isometric dev windows, and autonomous agent swarms in 9:16 vertical.",
+    sampleScript:
+      "How do autonomous AI agents actually execute real-world tasks without hallucinating? First, your phone triggers the request through a lightweight mobile agent. Behind the scenes, the orchestrator spins up isolated Docker containers. A recursive reasoning loop checks every terminal command against a deterministic test suite. And if an anomaly occurs, the security sentinel isolates the container in forty-two milliseconds.",
+    icon: Smartphone,
   },
 ];
 
