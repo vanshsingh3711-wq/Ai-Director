@@ -52,8 +52,8 @@ def test_insta_reel_subtitle_preset_and_dock():
     with open(out_ass, "r") as f:
         content = f.read()
 
-    # Must contain position locked to y=1420 beneath monitor frame
-    assert r"\pos(540,1420)" in content
+    # Must contain position locked to y=1450 beneath monitor frame
+    assert r"\pos(540,1450)" in content
     # Must contain ASS Dialogue lines
     assert "Dialogue:" in content
 

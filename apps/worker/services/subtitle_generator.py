@@ -503,14 +503,14 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         bottom_y = play_res_y - margin_v
         default_pos_prefix = rf"{{\an2\pos({center_x},{bottom_y})}}"
 
-    # Insta Reel positioning: captions dock cleanly beneath the monitor card (~y=1420 on 1080x1920)
+    # Insta Reel positioning: captions dock cleanly beneath the monitor stand (~y=1450 on 1080x1920)
     is_insta_reel_caption = bool(
         kwargs.get("is_insta_reel")
         or caption_preset == "insta_reel"
         or kwargs.get("video_style") == "insta_reel"
     )
     if is_insta_reel_caption and play_res_y >= 1900:
-        default_pos_prefix = rf"{{\an5\pos({center_x},1420)}}"
+        default_pos_prefix = rf"{{\an5\pos({center_x},1450)}}"
 
     # When motion graphics overlay is present, position caption at the bottom of the motion graphics card
     # (NOT at the bottom of the video, and NOT covering the card center)

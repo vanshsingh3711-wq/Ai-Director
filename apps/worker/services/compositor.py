@@ -743,6 +743,7 @@ def _ensure_insta_reel_assets(assets_dir: str):
     bg_canvas = os.path.join(assets_dir, "bg_canvas_9x16.png")
     shadow_layer = os.path.join(assets_dir, "shadow_layer.png")
     bezel_layer = os.path.join(assets_dir, "bezel_layer.png")
+    monitor_frame = os.path.join(assets_dir, "monitor_frame.png")
     corner_mask = os.path.join(assets_dir, "corner_mask.png")
 
     from PIL import Image, ImageDraw, ImageFilter, ImageOps
@@ -813,6 +814,7 @@ def composite_insta_reel(
     bg_canvas = os.path.join(assets_dir, "bg_canvas_9x16.png")
     shadow_layer = os.path.join(assets_dir, "shadow_layer.png")
     bezel_layer = os.path.join(assets_dir, "bezel_layer.png")
+    monitor_frame = os.path.join(assets_dir, "monitor_frame.png")
     corner_mask = os.path.join(assets_dir, "corner_mask.png")
 
     input_streams = _probe_streams(ffmpeg_bin, source_video_path)
@@ -836,12 +838,13 @@ def composite_insta_reel(
     else:
         filter_parts.append("[monitor_comp]format=yuv420p[vout]")
 
+    frame_layer = monitor_frame if os.path.exists(monitor_frame) else bezel_layer
     cmd = [
         ffmpeg_bin, "-y",
         "-loop", "1", "-i", bg_canvas,
         "-i", source_video_path,
         "-loop", "1", "-i", shadow_layer,
-        "-loop", "1", "-i", bezel_layer,
+        "-loop", "1", "-i", frame_layer,
         "-loop", "1", "-i", corner_mask,
         "-filter_complex", "".join(filter_parts),
         "-map", "[vout]",
