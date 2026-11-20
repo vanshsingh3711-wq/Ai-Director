@@ -43,14 +43,16 @@ export default function CreateWizardPage() {
   const [script, setScript] = useState(
     "If you can't explain this concept to a twelve-year-old, you don't truly understand it. Compound interest isn't just about saving money. It's about letting mathematical momentum do the heavy lifting for you while you sleep."
   );
+  const [editingPrompt, setEditingPrompt] = useState("");
+  const [isExplanation, setIsExplanation] = useState(true);
   const [urlInput, setUrlInput] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState("feynman_short");
 
   // Visual treatments
   const [aspectRatio, setAspectRatio] = useState<"9:16" | "16:9" | "1:1">("9:16");
-  const [videoStyle, setVideoStyle] = useState<"viral" | "educational" | "cinematic" | "minimal">("educational");
-  const [captionPreset, setCaptionPreset] = useState<"tiktok_yellow" | "neon_cyber" | "modern_clean" | "boxed_pill">("tiktok_yellow");
+  const [videoStyle, setVideoStyle] = useState<"viral" | "educational" | "cinematic" | "minimal" | "insta_reel">("educational");
+  const [captionPreset, setCaptionPreset] = useState<"tiktok_yellow" | "neon_cyber" | "modern_clean" | "boxed_pill" | "insta_reel">("tiktok_yellow");
 
   // AI Directing modules
   const [aiFeatures, setAiFeatures] = useState({
@@ -152,6 +154,12 @@ export default function CreateWizardPage() {
         return {
           valid: false,
           reason: "Please provide a script with at least 3 words for AI directing.",
+        };
+      }
+      if (creationPath === "insta_reel" && !selectedFile && (!script.trim() || wordCount < 3)) {
+        return {
+          valid: false,
+          reason: "Please upload your video footage or provide an explainer script for the Insta Reel.",
         };
       }
       if (creationPath === "url") {
@@ -261,16 +269,20 @@ export default function CreateWizardPage() {
               ? "talking_head"
               : creationPath === "tech_explainer"
               ? "tech_explainer"
+              : creationPath === "insta_reel"
+              ? "insta_reel"
               : "faceless_short",
           clerk_id: "user_default",
           email: "user@example.com",
           settings: {
             aspect_ratio: aspectRatio,
-            video_style: videoStyle,
-            caption_preset: captionPreset,
+            video_style: creationPath === "insta_reel" ? "insta_reel" : videoStyle,
+            caption_preset: creationPath === "insta_reel" ? "insta_reel" : captionPreset,
             script_text: script,
             creation_path: creationPath,
             ai_features: aiFeatures,
+            editing_prompt: editingPrompt,
+            is_explanation: isExplanation,
           },
         }),
       });
@@ -403,11 +415,13 @@ export default function CreateWizardPage() {
               />
             )}
 
-            {/* If upload path, show file dropzone */}
-            {creationPath === "upload" && (
+            {/* If upload or insta_reel path, show file dropzone */}
+            {(creationPath === "upload" || creationPath === "insta_reel") && (
               <div className="space-y-3">
                 <label className="text-xs font-semibold text-white/80">
-                  Upload Speaking Footage (.mp4, .mov)
+                  {creationPath === "insta_reel"
+                    ? "Upload Footage / Screen Recording to Frame (.mp4, .mov)"
+                    : "Upload Speaking Footage (.mp4, .mov)"}
                 </label>
                 <div
                   onDragEnter={handleDrag}
@@ -452,7 +466,9 @@ export default function CreateWizardPage() {
                         <Upload className="w-5 h-5" />
                       </div>
                       <div className="text-sm font-semibold text-white">
-                        Drag and drop your raw video footage here
+                        {creationPath === "insta_reel"
+                          ? "Drag & drop your screen recording or video here"
+                          : "Drag and drop your raw video footage here"}
                       </div>
                       <div className="text-caption text-white/40 mt-1">
                         MP4, MOV, WebM up to 500MB
@@ -460,6 +476,40 @@ export default function CreateWizardPage() {
                     </>
                   )}
                 </div>
+
+                {/* Optional AI Editing Prompt (Insta Reel exclusive) */}
+                {creationPath === "insta_reel" && (
+                  <div className="p-4 rounded-xl bg-violet-600/10 border border-violet-500/25 space-y-3 mt-4">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-white/90">
+                        AI Editing Prompt <span className="text-white/40 font-normal">(Optional)</span>
+                      </label>
+                      <Badge variant="info">Insta Reel Only</Badge>
+                    </div>
+                    <p className="text-caption text-white/50">
+                      By default, your main video is framed <strong>100% uncut</strong> on the textured canvas. Only enter instructions here if you want the AI Director to cut pauses or insert b-roll.
+                    </p>
+                    <textarea
+                      value={editingPrompt}
+                      onChange={(e) => setEditingPrompt(e.target.value)}
+                      placeholder="e.g. 'Trim dead pauses, add zoom-in when cursor clicks, and add subtle whoosh SFX' (Leave blank for uncut video)"
+                      rows={2}
+                      className="w-full p-3 rounded-lg bg-white/[0.04] border border-white/[0.1] text-xs text-white placeholder-white/30 outline-none focus:border-cyan-400"
+                    />
+                    <div className="flex items-center gap-2 pt-1">
+                      <input
+                        type="checkbox"
+                        id="instaExplanation"
+                        checked={isExplanation}
+                        onChange={(e) => setIsExplanation(e.target.checked)}
+                        className="rounded border-white/20 bg-white/5 text-violet-500 focus:ring-0"
+                      />
+                      <label htmlFor="instaExplanation" className="text-xs text-white/80 cursor-pointer">
+                        Generate Animated Explainer Captions (docked under monitor frame)
+                      </label>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

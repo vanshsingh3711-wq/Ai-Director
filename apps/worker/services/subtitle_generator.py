@@ -248,6 +248,18 @@ PRESET_CONFIGS = {
         "pop_scale": 115,
         "border_style": 1,
     },
+    "insta_reel": {
+        "fontname": "DejaVu Sans",
+        "primary": "&H00181111",
+        "active": "&H00D4FF00",
+        "outline": "&H00FFFFFF",
+        "back": "&H80000000",
+        "outline_w": 4,
+        "shadow_w": 2,
+        "bold": -1,
+        "pop_scale": 128,
+        "border_style": 1,
+    },
     "modern_clean": {
         "fontname": "DejaVu Sans",
         "primary": "&H00FFFFFF",
@@ -491,6 +503,15 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         bottom_y = play_res_y - margin_v
         default_pos_prefix = rf"{{\an2\pos({center_x},{bottom_y})}}"
 
+    # Insta Reel positioning: captions dock cleanly beneath the monitor card (~y=1420 on 1080x1920)
+    is_insta_reel_caption = bool(
+        kwargs.get("is_insta_reel")
+        or caption_preset == "insta_reel"
+        or kwargs.get("video_style") == "insta_reel"
+    )
+    if is_insta_reel_caption and play_res_y >= 1900:
+        default_pos_prefix = rf"{{\an5\pos({center_x},1420)}}"
+
     # When motion graphics overlay is present, position caption at the bottom of the motion graphics card
     # (NOT at the bottom of the video, and NOT covering the card center)
     mg_bottom_y = kwargs.get("motion_graphics_bottom_y")
@@ -543,7 +564,9 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                 is_inside_mg = _is_inside_motion_graphic(m_start, m_end)
                 if is_inside_mg and suppress_motion_graphics:
                     continue
-                if gatekeeper:
+                if is_insta_reel_caption:
+                    pos_prefix = default_pos_prefix
+                elif gatekeeper:
                     placement = gatekeeper.resolve_caption_placement(
                         start_time=m_start,
                         end_time=m_end,
@@ -607,7 +630,9 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             if is_inside_mg and suppress_motion_graphics:
                 continue
 
-            if gatekeeper:
+            if is_insta_reel_caption:
+                pos_prefix = default_pos_prefix
+            elif gatekeeper:
                 placement = gatekeeper.resolve_caption_placement(
                     start_time=win_mapped_start,
                     end_time=win_mapped_end,

@@ -19,10 +19,10 @@ import { cn } from "@/lib/utils";
 export interface ConfigPanelProps {
   aspectRatio: "9:16" | "16:9" | "1:1";
   onAspectRatioChange: (ratio: "9:16" | "16:9" | "1:1") => void;
-  videoStyle: "viral" | "educational" | "cinematic" | "minimal";
-  onVideoStyleChange: (style: "viral" | "educational" | "cinematic" | "minimal") => void;
-  captionPreset: "tiktok_yellow" | "neon_cyber" | "modern_clean" | "boxed_pill";
-  onCaptionPresetChange: (preset: "tiktok_yellow" | "neon_cyber" | "modern_clean" | "boxed_pill") => void;
+  videoStyle: "viral" | "educational" | "cinematic" | "minimal" | "insta_reel";
+  onVideoStyleChange: (style: "viral" | "educational" | "cinematic" | "minimal" | "insta_reel") => void;
+  captionPreset: "tiktok_yellow" | "neon_cyber" | "modern_clean" | "boxed_pill" | "insta_reel";
+  onCaptionPresetChange: (preset: "tiktok_yellow" | "neon_cyber" | "modern_clean" | "boxed_pill" | "insta_reel") => void;
   aiFeatures: {
     faceTracking: boolean;
     trimSilences: boolean;
@@ -56,7 +56,7 @@ export function ConfigPanel({
   ];
 
   const videoStyles: Array<{
-    id: "viral" | "educational" | "cinematic" | "minimal";
+    id: "viral" | "educational" | "cinematic" | "minimal" | "insta_reel";
     name: string;
     desc: string;
   }> = [
@@ -64,10 +64,11 @@ export function ConfigPanel({
     { id: "educational", name: "Educational Feynman", desc: "Clear docked subtitles, 3D cards, explanatory flow" },
     { id: "cinematic", name: "Cinematic Mood", desc: "Atmospheric grade, slow zooms, subtle ambient audio" },
     { id: "minimal", name: "Minimalist Clean", desc: "Monochrome cards, distraction-free clarity" },
+    { id: "insta_reel", name: "Insta Reel", desc: "Sleek monitor frame on luxury textured backdrop (uncut by default)" },
   ];
 
   const captionPresets: Array<{
-    id: "tiktok_yellow" | "neon_cyber" | "modern_clean" | "boxed_pill";
+    id: "tiktok_yellow" | "neon_cyber" | "modern_clean" | "boxed_pill" | "insta_reel";
     name: string;
     preview: string;
   }> = [
@@ -75,6 +76,7 @@ export function ConfigPanel({
     { id: "neon_cyber", name: "Neon Cyber", preview: "CYAN GLOW" },
     { id: "modern_clean", name: "Modern Clean", preview: "VIOLET UNDERLINE" },
     { id: "boxed_pill", name: "Boxed Pill", preview: "DARK PILL" },
+    { id: "insta_reel", name: "Insta Reel", preview: "CHARCOAL + CYAN POP" },
   ];
 
   return (

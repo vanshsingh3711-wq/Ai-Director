@@ -732,6 +732,140 @@ def clean_segment_cache(cache_dir: str, max_age_days: int = 7, max_size_bytes: O
 
 
 # ---------------------------------------------------------------------------
+# Insta Reel (Monitor Mockup on Textured Canvas) Compositing
+# ---------------------------------------------------------------------------
+
+def _ensure_insta_reel_assets(assets_dir: str):
+    """
+    Ensures background canvas, rounded corner mask, drop shadow, and bezel layers exist.
+    """
+    os.makedirs(assets_dir, exist_ok=True)
+    bg_canvas = os.path.join(assets_dir, "bg_canvas_9x16.png")
+    shadow_layer = os.path.join(assets_dir, "shadow_layer.png")
+    bezel_layer = os.path.join(assets_dir, "bezel_layer.png")
+    corner_mask = os.path.join(assets_dir, "corner_mask.png")
+
+    from PIL import Image, ImageDraw, ImageFilter, ImageOps
+
+    vw, vh = 904, 508
+    pos_x = (1080 - vw) // 2
+    pos_y = (1920 - vh) // 2
+    radius = 28
+
+    if not os.path.exists(bg_canvas):
+        tex_v = os.path.join(assets_dir, "bg_texture_vertical.jpg")
+        if os.path.exists(tex_v):
+            im = Image.open(tex_v).convert("RGB")
+            bg = ImageOps.fit(im, (1080, 1920), method=Image.Resampling.LANCZOS)
+        else:
+            bg = Image.new("RGB", (1080, 1920), (250, 250, 250))
+        bg.save(bg_canvas)
+
+    if not os.path.exists(corner_mask):
+        mask = Image.new("L", (vw, vh), 0)
+        draw = ImageDraw.Draw(mask)
+        draw.rounded_rectangle([(0, 0), (vw - 1, vh - 1)], radius=radius, fill=255)
+        mask.save(corner_mask)
+
+    if not os.path.exists(shadow_layer):
+        shadow = Image.new("RGBA", (1080, 1920), (0, 0, 0, 0))
+        s_draw = ImageDraw.Draw(shadow)
+        s_draw.rounded_rectangle(
+            [(pos_x, pos_y + 8), (pos_x + vw, pos_y + vh + 8)],
+            radius=radius + 2,
+            fill=(0, 0, 0, 80),
+        )
+        shadow = shadow.filter(ImageFilter.GaussianBlur(18))
+        shadow.save(shadow_layer)
+
+    if not os.path.exists(bezel_layer):
+        bezel = Image.new("RGBA", (1080, 1920), (0, 0, 0, 0))
+        b_draw = ImageDraw.Draw(bezel)
+        b_draw.rounded_rectangle(
+            [(pos_x, pos_y), (pos_x + vw - 1, pos_y + vh - 1)],
+            radius=radius,
+            outline=(18, 18, 22, 255),
+            width=2,
+        )
+        bezel.save(bezel_layer)
+
+
+def composite_insta_reel(
+    source_video_path: str,
+    output_mp4_path: str,
+    subtitle_ass_path: Optional[str] = None,
+    settings: Optional[Dict[str, Any]] = None,
+) -> str:
+    """
+    Composites input video inside a sleek rounded monitor frame with drop shadow
+    over a textured aesthetic backdrop (9:16 vertical 1080x1920 format).
+    """
+    settings = settings or {}
+    ffmpeg_bin = get_ffmpeg_binary_path()
+    os.makedirs(os.path.dirname(os.path.abspath(output_mp4_path)), exist_ok=True)
+
+    assets_dir = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "assets", "templates", "insta_reel"
+    )
+    _ensure_insta_reel_assets(assets_dir)
+
+    bg_canvas = os.path.join(assets_dir, "bg_canvas_9x16.png")
+    shadow_layer = os.path.join(assets_dir, "shadow_layer.png")
+    bezel_layer = os.path.join(assets_dir, "bezel_layer.png")
+    corner_mask = os.path.join(assets_dir, "corner_mask.png")
+
+    input_streams = _probe_streams(ffmpeg_bin, source_video_path)
+    source_has_audio = input_streams.get("has_audio", False)
+    source_fps = input_streams.get("fps", 25.0) or 25.0
+
+    vw, vh = 904, 508
+    pos_x, pos_y = 88, 706
+
+    filter_parts = [
+        f"[1:v]scale={vw}:{vh}:force_original_aspect_ratio=decrease,pad={vw}:{vh}:({vw}-iw)/2:({vh}-ih)/2:black,format=yuva420p[scaled_vid];",
+        f"[scaled_vid][4:v]alphamerge[rounded_vid];",
+        f"[0:v][2:v]overlay=0:0[bg_with_shadow];",
+        f"[bg_with_shadow][rounded_vid]overlay={pos_x}:{pos_y}[with_vid];",
+        f"[with_vid][3:v]overlay=0:0[monitor_comp];",
+    ]
+
+    if subtitle_ass_path and os.path.exists(subtitle_ass_path) and os.path.getsize(subtitle_ass_path) > 50:
+        escaped_ass = _escape_ass_path_for_filter(subtitle_ass_path)
+        filter_parts.append(f"[monitor_comp]subtitles='{escaped_ass}',format=yuv420p[vout]")
+    else:
+        filter_parts.append("[monitor_comp]format=yuv420p[vout]")
+
+    cmd = [
+        ffmpeg_bin, "-y",
+        "-loop", "1", "-i", bg_canvas,
+        "-i", source_video_path,
+        "-loop", "1", "-i", shadow_layer,
+        "-loop", "1", "-i", bezel_layer,
+        "-loop", "1", "-i", corner_mask,
+        "-filter_complex", "".join(filter_parts),
+        "-map", "[vout]",
+    ]
+
+    if source_has_audio:
+        cmd.extend(["-map", "1:a", "-c:a", "aac", "-b:a", "192k"])
+    else:
+        cmd.extend(["-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo", "-map", "5:a", "-c:a", "aac"])
+
+    cmd.extend([
+        "-c:v", _get_video_codec(ffmpeg_bin),
+        "-preset", "fast",
+        "-crf", "20",
+        "-shortest",
+        output_mp4_path,
+    ])
+
+    _log("INSTA_REEL", f"Rendering Insta Reel monitor frame composite to {output_mp4_path}...")
+    _run_ffmpeg(cmd, "insta_reel_render")
+    return output_mp4_path
+
+
+# ---------------------------------------------------------------------------
 # Main Render Function
 # ---------------------------------------------------------------------------
 
@@ -828,6 +962,22 @@ def render_video_pipeline(
 
     if not kept_segments:
         kept_segments = [{"start": 0.0, "end": total_duration, "chunk_id": "FULL", "actions": [], "is_cut": False}]
+
+    is_insta_reel = bool(
+        settings.get("is_insta_reel")
+        or settings.get("video_style") == "insta_reel"
+        or str(settings.get("creation_path", "")).lower() == "insta_reel"
+    )
+    if is_insta_reel:
+        has_ai_edits = bool(edits and any(e.get("action") in ("cut", "b_roll", "motion_graphics") for e in edits))
+        if not has_ai_edits:
+            _log("INSTA_REEL", "Executing direct single-pass Insta Reel monitor frame composition on uncut footage")
+            return composite_insta_reel(
+                source_video_path=raw_video_path,
+                output_mp4_path=output_mp4_path,
+                subtitle_ass_path=subtitle_ass_path,
+                settings=settings,
+            )
 
     if settings.get("continuous_composition") or settings.get("SINGLE_PASS_COMPOSITION") or settings.get("is_tech_explainer"):
         _log("TIMELINE", "Using continuous single-pass composition (zero segment chopping, zero concat blinking)")
@@ -1466,7 +1616,7 @@ def render_video_pipeline(
         "-i", concat_txt_path
     ]
 
-    if subtitle_ass_path and os.path.exists(subtitle_ass_path) and os.path.getsize(subtitle_ass_path) > 50:
+    if not is_insta_reel and subtitle_ass_path and os.path.exists(subtitle_ass_path) and os.path.getsize(subtitle_ass_path) > 50:
         escaped_ass = _escape_ass_path_for_filter(subtitle_ass_path)
         cmd_concat.extend([
             "-vf", f"subtitles={escaped_ass}",
@@ -1541,6 +1691,18 @@ def render_video_pipeline(
                     pass
                 except OSError:
                     pass
+
+    if is_insta_reel:
+        _log("INSTA_REEL", "Wrapping AI-edited video inside Insta Reel monitor frame")
+        framed_output_path = os.path.join(temp_dir, "insta_reel_framed.mp4")
+        composite_insta_reel(
+            source_video_path=output_mp4_path,
+            output_mp4_path=framed_output_path,
+            subtitle_ass_path=subtitle_ass_path,
+            settings=settings,
+        )
+        if os.path.exists(framed_output_path) and os.path.getsize(framed_output_path) > 1024:
+            shutil.move(framed_output_path, output_mp4_path)
 
     return output_mp4_path
 

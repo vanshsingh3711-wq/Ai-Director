@@ -130,6 +130,28 @@ def process_video_pipeline(self: Task, job_id: str) -> dict:
         style_pref = job_settings.get("video_style", "viral")
         aspect_ratio = job_settings.get("aspect_ratio", "9:16")
 
+        is_insta_reel = bool(
+            job_video_type == VideoType.INSTA_REEL
+            or str(job_video_type).lower() == "insta_reel"
+            or style_pref == "insta_reel"
+            or str(job_settings.get("creation_path", "")).lower() == "insta_reel"
+        )
+        user_edit_prompt = str(
+            job_settings.get("editing_prompt")
+            or job_settings.get("user_prompt")
+            or job_settings.get("prompt")
+            or ""
+        ).strip()
+        ai_edit_video = bool(job_settings.get("ai_edit_video", False) or user_edit_prompt)
+        is_explanation = bool(job_settings.get("is_explanation", True))
+
+        if is_insta_reel:
+            aspect_ratio = "9:16"
+            job_settings["aspect_ratio"] = "9:16"
+            job_settings["is_insta_reel"] = True
+            job_settings["ai_edit_video"] = ai_edit_video
+            log_info(f"📱 Insta Reel Mode Active | Uncut: {not ai_edit_video} | Edit Prompt: '{user_edit_prompt}' | Explainer Captions: {is_explanation}")
+
         log_info(f"Target Video Job: '{job_title}' | Type: {job_video_type} | Ratio: {aspect_ratio} | Style: {style_pref} | Model: {ai_model_pref}")
 
 
@@ -158,7 +180,14 @@ def process_video_pipeline(self: Task, job_id: str) -> dict:
         with PipelineStep(2, 8, "AUDIO EXTRACTION & SPEECH-TO-TEXT", "faster-whisper (int8 CPU / speech gap segmentation)"):
             set_job_status_transcribing(job_uuid)
             if job_video_type not in (VideoType.FACELESS_SHORT, VideoType.TECH_EXPLAINER):
-                extract_audio_track(raw_video_path, extracted_wav_path, sample_rate=16000, channels=1)
+                try:
+                    extract_audio_track(raw_video_path, extracted_wav_path, sample_rate=16000, channels=1, allow_silent_fallback=is_insta_reel)
+                except Exception as extract_err:
+                    if is_insta_reel:
+                        log_warning(f"Insta Reel audio notice: {extract_err}. Generating silent fallback audio.")
+                        extract_audio_track(raw_video_path, extracted_wav_path, sample_rate=16000, channels=1, allow_silent_fallback=True)
+                    else:
+                        raise
                 ffmpeg_bin = get_ffmpeg_binary_path()
                 total_duration = _probe_duration(ffmpeg_bin, raw_video_path)
             else:
@@ -256,7 +285,10 @@ def process_video_pipeline(self: Task, job_id: str) -> dict:
             log_info(f"Unified Audio Regions preview: {unified_audio_regions[:5]}")
 
             from services.speech_pruner import generate_deterministic_silence_cuts, invert_cuts_to_kept_ranges
-            if job_video_type not in (VideoType.FACELESS_SHORT, VideoType.TECH_EXPLAINER):
+            if is_insta_reel and not ai_edit_video:
+                log_info("[INSTA_REEL] Uncut presentation mode (no AI edit prompt). Silence cuts bypassed.")
+                deterministic_cuts = []
+            elif job_video_type not in (VideoType.FACELESS_SHORT, VideoType.TECH_EXPLAINER):
                 deterministic_cuts = generate_deterministic_silence_cuts(
                     total_duration=total_duration,
                     speech_intervals=speech_intervals,
@@ -275,7 +307,9 @@ def process_video_pipeline(self: Task, job_id: str) -> dict:
 
         # --- STEP 3: VISUAL ANALYSIS ---
         with PipelineStep(3, 8, "VISUAL INTELLIGENCE LAYER", "Extracting scenes, subjects, and safe regions"):
-            if job_video_type not in (VideoType.FACELESS_SHORT, VideoType.TECH_EXPLAINER):
+            if is_insta_reel and not ai_edit_video:
+                visual_timeline = {"video_id": job_id_str, "scenes": [], "subjects": [], "safe_regions": []}
+            elif job_video_type not in (VideoType.FACELESS_SHORT, VideoType.TECH_EXPLAINER):
                 visual_timeline = analyze_visual_context(
                     video_path=raw_video_path,
                     video_id=job_id_str,
@@ -394,7 +428,13 @@ def process_video_pipeline(self: Task, job_id: str) -> dict:
             )
             log_info(f"AI Directing Models -> Story & Motion Graphics: {mg_model} | B-Roll & Visuals: {broll_model} | Faceless: {is_faceless_job} | Mode: {'chunked' if use_chunked_directing else 'legacy'}")
 
-            if job_video_type == VideoType.TECH_EXPLAINER:
+            if is_insta_reel and not ai_edit_video:
+                log_info("[INSTA_REEL] AI Directing bypassed (uncut presentation mode). Zero B-roll / Motion Graphics edits injected.")
+                from services.ai_director import EditList
+                mg_plan = EditList(edits=[])
+                broll_plan = EditList(edits=[])
+                char_plan = EditList(edits=[])
+            elif job_video_type == VideoType.TECH_EXPLAINER:
                 log_info("⚡ Tech Explainer Directing: Generating script-tailored motion graphics plan...")
                 mg_plan = generate_motion_graphics_plan(unified_json_str, mg_model, style_pref)
                 
@@ -631,7 +671,11 @@ def process_video_pipeline(self: Task, job_id: str) -> dict:
 
         # --- STEP 5: MASTER BLUEPRINT RESOLVER & SFX PLANNER ---
         with PipelineStep(5, 8, "MASTER BLUEPRINT RESOLVER & SFX PLANNER", "Merging plans, resolving conflicts, adding sound"):
-            if use_chunked_directing:
+            if is_insta_reel and not ai_edit_video:
+                from services.ai_director import EditList
+                resolved_visual_blueprint = EditList(edits=[])
+                edit_decision_list = EditList(edits=[])
+            elif use_chunked_directing:
                 resolved_visual_blueprint = EditList(edits=[e for e in stitched_plan.edits if e.action != "sfx"])
                 edit_decision_list = stitched_plan
             else:
@@ -770,18 +814,31 @@ def process_video_pipeline(self: Task, job_id: str) -> dict:
                     except Exception as e:
                         log_warning(f"Could not build continuous stock background: {e}")
             
-            caption_preset = job_settings.get("caption_preset", "tiktok_yellow")
-            aspect_ratio = job_settings.get("aspect_ratio", "9:16")
+            caption_preset = job_settings.get("caption_preset", "insta_reel" if is_insta_reel else "tiktok_yellow")
+            aspect_ratio = "9:16" if is_insta_reel else job_settings.get("aspect_ratio", "9:16")
 
-            generate_ass_subtitles(
-                timestamp_map=timestamp_map,
-                output_ass_path=subtitle_ass_path,
-                edits=validated_edits,
-                caption_preset=caption_preset,
-                aspect_ratio=aspect_ratio,
-                is_faceless=is_faceless,
-                alignment=2 if job_video_type == VideoType.TECH_EXPLAINER else None,
-            )
+            # Check if explanation video / captions requested
+            should_render_subtitles = True
+            if is_insta_reel and not is_explanation:
+                should_render_subtitles = False
+                log_info("[INSTA_REEL] is_explanation is False. Subtitles bypassed.")
+                if os.path.exists(subtitle_ass_path):
+                    try:
+                        os.remove(subtitle_ass_path)
+                    except OSError:
+                        pass
+
+            if should_render_subtitles and timestamp_map:
+                generate_ass_subtitles(
+                    timestamp_map=timestamp_map,
+                    output_ass_path=subtitle_ass_path,
+                    edits=validated_edits,
+                    caption_preset=caption_preset,
+                    aspect_ratio=aspect_ratio,
+                    is_faceless=is_faceless,
+                    alignment=2 if job_video_type == VideoType.TECH_EXPLAINER else None,
+                    is_insta_reel=is_insta_reel,
+                )
 
         # --- STEP 7.5: 3D AVATAR RENDERING ---
         with PipelineStep(7.5, 8, "3D AVATAR RENDERING", "Rendering headless WebGL character"):
@@ -805,7 +862,12 @@ def process_video_pipeline(self: Task, job_id: str) -> dict:
         with PipelineStep(8, 8, "FFMPEG RENDERING & PUBLISHING", "Assembly of final MP4 and social export"):
             set_job_status_rendering(job_uuid)
             effective_settings = dict(job_settings)
-            if job_video_type == VideoType.TECH_EXPLAINER:
+            if is_insta_reel:
+                effective_settings["is_insta_reel"] = True
+                effective_settings["aspect_ratio"] = "9:16"
+                effective_settings["ai_edit_video"] = ai_edit_video
+                effective_settings["video_style"] = "insta_reel"
+            elif job_video_type == VideoType.TECH_EXPLAINER:
                 effective_settings["continuous_composition"] = True
                 effective_settings["SINGLE_PASS_COMPOSITION"] = True
                 effective_settings["is_tech_explainer"] = True

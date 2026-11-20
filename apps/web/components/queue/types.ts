@@ -14,7 +14,7 @@ export interface QueueJob {
   status: JobStatus;
   source_url: string;
   rendered_url?: string | null;
-  video_type?: "talking_head" | "faceless_short" | "tech_explainer";
+  video_type?: "talking_head" | "faceless_short" | "tech_explainer" | "insta_reel";
   edit_decision_list?: string | null;
   error_log?: string | null;
   progress?: number;

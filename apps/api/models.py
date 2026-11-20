@@ -21,6 +21,7 @@ class VideoType(str, enum.Enum):
     TALKING_HEAD = "talking_head"
     FACELESS_SHORT = "faceless_short"
     TECH_EXPLAINER = "tech_explainer"
+    INSTA_REEL = "insta_reel"
 
 
 class VideoJobStatus(str, enum.Enum):

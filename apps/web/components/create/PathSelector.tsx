@@ -1,11 +1,11 @@
 "use client";
 
 import React from "react";
-import { Sparkles, Upload, Zap, Globe, Check, Smartphone } from "lucide-react";
+import { Sparkles, Upload, Zap, Globe, Check, Smartphone, Monitor } from "lucide-react";
 import { Card, Badge } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
-export type CreationPath = "faceless" | "upload" | "template" | "url" | "tech_explainer";
+export type CreationPath = "faceless" | "upload" | "template" | "url" | "tech_explainer" | "insta_reel";
 
 export interface PathSelectorProps {
   selectedPath: CreationPath;
@@ -52,6 +52,18 @@ export function PathSelector({
       iconColor: "#00e5ff",
       glow: "cyan",
       features: ["3D Device Mockup", "Isometric Dev Windows", "Studio Vignette Canvas"],
+    },
+    {
+      id: "insta_reel",
+      title: "Insta Reel (Monitor Frame)",
+      badge: "Viral Mockup",
+      badgeVariant: "rendering",
+      description:
+        "Place your screen recording or video inside a sleek rounded monitor frame with drop shadow over a luxury textured background.",
+      icon: Monitor,
+      iconColor: "#e1306c",
+      glow: "violet",
+      features: ["Sleek Monitor Frame", "Textured Canvas Backdrop", "Optional AI Edits & Captions"],
     },
     {
       id: "upload",

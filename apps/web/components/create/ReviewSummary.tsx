@@ -91,7 +91,11 @@ export function ReviewSummary({
             Creation Mode
           </span>
           <div className="text-sm font-semibold text-white capitalize mt-0.5">
-            {creationPath === "tech_explainer" ? "Tech Explainer (3D & UI)" : creationPath}
+            {creationPath === "tech_explainer"
+              ? "Tech Explainer (3D & UI)"
+              : creationPath === "insta_reel"
+              ? "Insta Reel (Monitor Frame)"
+              : creationPath}
           </div>
         </div>
 

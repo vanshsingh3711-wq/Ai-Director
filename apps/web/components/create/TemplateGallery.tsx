@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Sparkles, Clock, Check, ArrowRight, Zap, BookOpen, TrendingUp, Cpu, Smartphone } from "lucide-react";
+import { Sparkles, Clock, Check, ArrowRight, Zap, BookOpen, TrendingUp, Cpu, Smartphone, Monitor } from "lucide-react";
 import { Card, Badge, Button } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
@@ -11,8 +11,8 @@ export interface TemplateItem {
   category: string;
   duration: string;
   aspectRatio: "9:16" | "16:9";
-  videoStyle: "educational" | "viral" | "cinematic";
-  captionPreset: "tiktok_yellow" | "neon_cyber" | "modern_clean";
+  videoStyle: "educational" | "viral" | "cinematic" | "insta_reel";
+  captionPreset: "tiktok_yellow" | "neon_cyber" | "modern_clean" | "insta_reel";
   description: string;
   sampleScript: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -74,6 +74,20 @@ export const PRESET_TEMPLATES: TemplateItem[] = [
     sampleScript:
       "How do autonomous AI agents actually execute real-world tasks without hallucinating? First, your phone triggers the request through a lightweight mobile agent. Behind the scenes, the orchestrator spins up isolated Docker containers. A recursive reasoning loop checks every terminal command against a deterministic test suite. And if an anomaly occurs, the security sentinel isolates the container in forty-two milliseconds.",
     icon: Smartphone,
+  },
+  {
+    id: "insta_reel",
+    title: "Insta Reel (Monitor Frame)",
+    category: "Mockup & Viral Screen",
+    duration: "Flexible",
+    aspectRatio: "9:16",
+    videoStyle: "insta_reel",
+    captionPreset: "insta_reel",
+    description:
+      "Puts your screen recording or video inside a sleek rounded monitor frame with drop shadow over a luxury textured background. Uncut by default, optional AI editing on prompt.",
+    sampleScript:
+      "Here is how this website was built with next-generation interactive components and smooth fluid transitions.",
+    icon: Monitor,
   },
 ];
 

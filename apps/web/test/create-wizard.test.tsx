@@ -30,15 +30,19 @@ describe("Phase 4: Create Flow Wizard", () => {
   });
 
   describe("PathSelector Component", () => {
-    it("renders all creation paths including Tech Explainer and triggers selection callback", () => {
+    it("renders all creation paths including Tech Explainer and Insta Reel, triggering selection callback", () => {
       const handleSelect = vi.fn();
       render(<PathSelector selectedPath="faceless" onSelect={handleSelect} />);
 
       expect(screen.getByText("Faceless AI Video")).toBeInTheDocument();
       expect(screen.getByText("Tech Explainer (3D & UI)")).toBeInTheDocument();
+      expect(screen.getByText("Insta Reel (Monitor Frame)")).toBeInTheDocument();
       expect(screen.getByText("Upload & Enhance Footage")).toBeInTheDocument();
       expect(screen.getByText("Viral Presets Gallery")).toBeInTheDocument();
       expect(screen.getByText("From Article or URL")).toBeInTheDocument();
+
+      fireEvent.click(screen.getByText("Insta Reel (Monitor Frame)"));
+      expect(handleSelect).toHaveBeenCalledWith("insta_reel");
 
       fireEvent.click(screen.getByText("Tech Explainer (3D & UI)"));
       expect(handleSelect).toHaveBeenCalledWith("tech_explainer");

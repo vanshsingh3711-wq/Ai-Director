@@ -44,7 +44,7 @@ class CreateVideoJobRequest(BaseModel):
             if not any(clean_url.startswith(scheme) for scheme in allowed_schemes):
                 raise ValueError(f"Invalid source_url protocol. Allowed schemes: {allowed_schemes}")
 
-        # 2. Faceless videos require a script or topic
+        # 2. Faceless & Explainer videos require a script or topic
         elif self.video_type in (VideoType.FACELESS_SHORT, VideoType.TECH_EXPLAINER):
             settings_dict = self.settings or {}
             script_text = (
@@ -56,6 +56,19 @@ class CreateVideoJobRequest(BaseModel):
             if not isinstance(script_text, str) or not script_text.strip():
                 type_name = "Tech explainer" if self.video_type == VideoType.TECH_EXPLAINER else "Faceless short"
                 raise ValueError(f"{type_name} videos require 'script_text' or 'topic' in job settings.")
+
+        # 3. Insta Reel videos require either a source_url (footage to frame) or script/topic
+        elif self.video_type == VideoType.INSTA_REEL:
+            settings_dict = self.settings or {}
+            clean_url = (self.source_url or "").strip()
+            script_text = (
+                settings_dict.get("script_text")
+                or settings_dict.get("script")
+                or settings_dict.get("topic")
+                or ""
+            )
+            if not clean_url and not script_text.strip():
+                raise ValueError("Insta Reel videos require either 'source_url' (footage) or 'script_text'/'topic' in job settings.")
 
         # 3. Guard against SSRF / local path injection in source_url
         if self.source_url:
@@ -153,6 +166,10 @@ def create_video_job(
         if "aspect_ratio" not in job_settings:
             job_settings["aspect_ratio"] = "9:16"
         job_settings["is_faceless"] = True
+    elif payload.video_type == VideoType.INSTA_REEL:
+        if "aspect_ratio" not in job_settings:
+            job_settings["aspect_ratio"] = "9:16"
+        job_settings["is_insta_reel"] = True
 
     job = VideoJob(
         user_id=user.id,
@@ -824,6 +841,8 @@ def get_video_timeline(
     )
     if job.video_type == VideoType.TECH_EXPLAINER:
         default_caption_y = 80
+    elif job.video_type == VideoType.INSTA_REEL:
+        default_caption_y = 74
     elif is_faceless_job:
         default_caption_y = 50
     else:
