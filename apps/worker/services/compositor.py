@@ -820,6 +820,7 @@ def composite_insta_reel(
     input_streams = _probe_streams(ffmpeg_bin, source_video_path)
     source_has_audio = input_streams.get("has_audio", False)
     source_fps = input_streams.get("fps", 25.0) or 25.0
+    source_duration = input_streams.get("video_duration") or input_streams.get("audio_duration") or 0.0
 
     vw, vh = 904, 508
     pos_x, pos_y = 88, 706
@@ -846,22 +847,30 @@ def composite_insta_reel(
         "-loop", "1", "-i", shadow_layer,
         "-loop", "1", "-i", frame_layer,
         "-loop", "1", "-i", corner_mask,
+    ]
+
+    if not source_has_audio:
+        cmd.extend(["-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo"])
+
+    cmd.extend([
         "-filter_complex", "".join(filter_parts),
         "-map", "[vout]",
-    ]
+    ])
 
     if source_has_audio:
         cmd.extend(["-map", "1:a", "-c:a", "aac", "-b:a", "192k"])
     else:
-        cmd.extend(["-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo", "-map", "5:a", "-c:a", "aac"])
+        cmd.extend(["-map", "5:a", "-c:a", "aac"])
 
     cmd.extend([
         "-c:v", _get_video_codec(ffmpeg_bin),
         "-preset", "fast",
         "-crf", "20",
         "-shortest",
-        output_mp4_path,
     ])
+    if source_duration and source_duration > 0.05:
+        cmd.extend(["-t", f"{source_duration:.3f}"])
+    cmd.append(output_mp4_path)
 
     _log("INSTA_REEL", f"Rendering Insta Reel monitor frame composite to {output_mp4_path}...")
     _run_ffmpeg(cmd, "insta_reel_render")
